@@ -33,7 +33,6 @@ import json
 import csv
 import os
 import random
-import math
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -778,7 +777,6 @@ def build_kafka_stream() -> list:
     records = []
     offsets = {atm["id"]: 1000 + i * 1000 for i, atm in enumerate(ATMS)}
 
-    a3_oom_time = A4_START  # OOM at 09:30
 
     for t in minutes_range(BASE_DATE, END_DATE, step_minutes=1):
         for atm in ATMS:
@@ -795,7 +793,6 @@ def build_kafka_stream() -> list:
             success_rate   = round(random.uniform(99.0, 100.0), 2)
             failure_reason = "NONE"
             fail_count     = 0
-            vol_increment  = random.randint(1, 3)
 
             # ---- ANOMALY A5: ATM-GB-0001 at 09:30-09:31 ----
             if atm_id == "ATM-GB-0001" and A5_START <= t < A5_END:
@@ -1127,8 +1124,6 @@ def build_gcp_metrics() -> list:
     restart_count = 0
 
     for t in minutes_range(BASE_DATE, END_DATE, step_minutes=1):
-        elapsed_secs = (t - BASE_DATE).total_seconds()
-        container = container_at(t)
         anomaly = None
 
         # Determine memory / CPU using same logic as Prometheus
@@ -1144,7 +1139,8 @@ def build_gcp_metrics() -> list:
         elif A4_START <= t < A4_START + timedelta(seconds=15):
             anomaly   = "A4"
             restart_count = 1
-            heap = 0; cpu_frac = 0.0
+            heap = 0
+            cpu_frac = 0.0
         elif A4_START + timedelta(seconds=15) <= t < A4_START + timedelta(minutes=3, seconds=40):
             anomaly   = "A4"
             progress  = (t - (A4_START + timedelta(seconds=15))).total_seconds() / (3 * 60 + 25)
@@ -1154,7 +1150,8 @@ def build_gcp_metrics() -> list:
         elif A4_START + timedelta(minutes=3, seconds=40) <= t < A4_START + timedelta(minutes=3, seconds=55):
             anomaly   = "A4"
             restart_count = 2
-            heap = 0; cpu_frac = 0.0
+            heap = 0 
+            cpu_frac = 0.0
         else:
             heap      = int(jitter(314572800 + 50000000, 0.03))
             cpu_frac  = round(jitter(0.09, 0.10), 4)
