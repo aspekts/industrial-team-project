@@ -12,7 +12,7 @@ A prototype observability platform that ingests logs from multiple ATM and banki
 |---|---|
 | Marcus | Lead · Synthetic data generation · ML model · Recommendation engine |
 | Max | Log parsers (all 7 sources) |
-| Emily | Data cleaning pipeline |
+| Emily | Data filtering |
 | Olga | Data cleaning pipeline |
 | Callum | Anomaly detection rules · Cross-source correlation |
 | Sophina | Dashboard & visualisation |
