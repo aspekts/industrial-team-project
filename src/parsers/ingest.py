@@ -6,19 +6,19 @@ import json
 # File paths - change these to point to where your source files are
 # ──────────────────────────────────────────────────────────────────────────────
 
-FILE_ATM_APP_LOG        = "atm_application_log.json"
-FILE_ATM_HW_LOG         = "atm_hardware_sensor_log.json"
-FILE_GCP_METRICS        = "gcp_cloud_metrics.csv"
-FILE_PROMETHEUS_METRICS = "prometheus_metrics.csv"
-FILE_WINDOWS_METRICS    = "windows_os_metrics.csv"
-FILE_KAFKA_STREAM       = "kafka_atm_metrics_stream.json"
-FILE_TERMINAL_LOG       = "terminal_handler_app_log.json"
+FILE_ATM_APP_LOG        = "Logs/atm_application_log.json"
+FILE_ATM_HW_LOG         = "Logs/atm_hardware_sensor_log.json"
+FILE_GCP_METRICS        = "Logs/gcp_cloud_metrics.csv"
+FILE_PROMETHEUS_METRICS = "Logs/prometheus_metrics.csv"
+FILE_WINDOWS_METRICS    = "Logs/windows_os_metrics.csv"
+FILE_KAFKA_STREAM       = "Logs/kafka_atm_metrics_stream.json"
+FILE_TERMINAL_LOG       = "Logs/terminal_handler_app_log.json"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Output folder - all text files will be written here
 # ──────────────────────────────────────────────────────────────────────────────
 
-OutputFolder = "loaded_logs"
+OutputFolder = "data/synthetic"
 
 try:
     os.mkdir(OutputFolder)
@@ -347,40 +347,42 @@ def checkRowCounts():
 # Main - runs all the steps in order
 # ──────────────────────────────────────────────────────────────────────────────
 
-# check all source files exist before doing anything
-if not os.path.exists(FILE_ATM_APP_LOG):
-    print("ERROR: cannot find " + FILE_ATM_APP_LOG)
 
-elif not os.path.exists(FILE_ATM_HW_LOG):
-    print("ERROR: cannot find " + FILE_ATM_HW_LOG)
+def run_ingestion():
+    # check all source files exist before doing anything
+    if not os.path.exists(FILE_ATM_APP_LOG):
+        print("ERROR: cannot find " + FILE_ATM_APP_LOG)
 
-elif not os.path.exists(FILE_GCP_METRICS):
-    print("ERROR: cannot find " + FILE_GCP_METRICS)
+    elif not os.path.exists(FILE_ATM_HW_LOG):
+        print("ERROR: cannot find " + FILE_ATM_HW_LOG)
 
-elif not os.path.exists(FILE_PROMETHEUS_METRICS):
-    print("ERROR: cannot find " + FILE_PROMETHEUS_METRICS)
+    elif not os.path.exists(FILE_GCP_METRICS):
+        print("ERROR: cannot find " + FILE_GCP_METRICS)
 
-elif not os.path.exists(FILE_WINDOWS_METRICS):
-    print("ERROR: cannot find " + FILE_WINDOWS_METRICS)
+    elif not os.path.exists(FILE_PROMETHEUS_METRICS):
+        print("ERROR: cannot find " + FILE_PROMETHEUS_METRICS)
 
-elif not os.path.exists(FILE_KAFKA_STREAM):
-    print("ERROR: cannot find " + FILE_KAFKA_STREAM)
+    elif not os.path.exists(FILE_WINDOWS_METRICS):
+        print("ERROR: cannot find " + FILE_WINDOWS_METRICS)
 
-elif not os.path.exists(FILE_TERMINAL_LOG):
-    print("ERROR: cannot find " + FILE_TERMINAL_LOG)
+    elif not os.path.exists(FILE_KAFKA_STREAM):
+        print("ERROR: cannot find " + FILE_KAFKA_STREAM)
+
+    elif not os.path.exists(FILE_TERMINAL_LOG):
+        print("ERROR: cannot find " + FILE_TERMINAL_LOG)
 
 
-else:
-    # step 1 - load each source file and write it to a text file
-    loadATMAppLog()
-    loadATMHardwareLog()
-    loadGCPMetrics()
-    loadPrometheusMetrics()
-    loadWindowsMetrics()
-    loadKafkaStream()
-    loadTerminalHandlerLog()
+    else:
+        # step 1 - load each source file and write it to a text file
+        loadATMAppLog()
+        loadATMHardwareLog()
+        loadGCPMetrics()
+        loadPrometheusMetrics()
+        loadWindowsMetrics()
+        loadKafkaStream()
+        loadTerminalHandlerLog()
 
-    # step 2 - confirm everything loaded correctly
-    checkRowCounts()
+        # step 2 - confirm everything loaded correctly
+        checkRowCounts()
 
-    print("\nDone. All logs saved to the '" + OutputFolder + "' folder.")
+        print("\nDone. All logs saved to the '" + OutputFolder + "' folder.")

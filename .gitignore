@@ -32,8 +32,10 @@ htmlcov/
 *.ipynb~
 
 # Generated / runtime data (never commit real or generated bulk data)
-data/raw/
-data/cleaned/
+Logs/
+loaded_logs/
+data/clean/
+data/synthetic/
 
 # Editor
 .vscode/
