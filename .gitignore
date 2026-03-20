@@ -35,7 +35,7 @@ htmlcov/
 Logs/
 loaded_logs/
 data/clean/
-data/synthetic/
+data/raw/
 
 # Editor
 .vscode/

@@ -5,20 +5,21 @@ import json
 # ──────────────────────────────────────────────────────────────────────────────
 # File paths - change these to point to where your source files are
 # ──────────────────────────────────────────────────────────────────────────────
+BASE_PATH = "data/synthetic"
 
-FILE_ATM_APP_LOG        = "Logs/atm_application_log.json"
-FILE_ATM_HW_LOG         = "Logs/atm_hardware_sensor_log.json"
-FILE_GCP_METRICS        = "Logs/gcp_cloud_metrics.csv"
-FILE_PROMETHEUS_METRICS = "Logs/prometheus_metrics.csv"
-FILE_WINDOWS_METRICS    = "Logs/windows_os_metrics.csv"
-FILE_KAFKA_STREAM       = "Logs/kafka_atm_metrics_stream.json"
-FILE_TERMINAL_LOG       = "Logs/terminal_handler_app_log.json"
+FILE_ATM_APP_LOG        = f"{BASE_PATH}/atm_application_log.json"
+FILE_ATM_HW_LOG         = f"{BASE_PATH}/atm_hardware_sensor_log.json"
+FILE_GCP_METRICS        = f"{BASE_PATH}/gcp_cloud_metrics.csv"
+FILE_PROMETHEUS_METRICS = f"{BASE_PATH}/prometheus_metrics.csv"
+FILE_WINDOWS_METRICS    = f"{BASE_PATH}/windows_os_metrics.csv"
+FILE_KAFKA_STREAM       = f"{BASE_PATH}/kafka_atm_metrics_stream.json"
+FILE_TERMINAL_LOG       = f"{BASE_PATH}/terminal_handler_app_log.json"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Output folder - all text files will be written here
 # ──────────────────────────────────────────────────────────────────────────────
 
-OutputFolder = "data/synthetic"
+OutputFolder = "data/raw"
 
 try:
     os.mkdir(OutputFolder)

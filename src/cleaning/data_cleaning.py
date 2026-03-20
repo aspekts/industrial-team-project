@@ -7,7 +7,7 @@ from src.cleaning.database import DatabaseHandler
 
 class LogCleaner:
     def __init__(self, db_handler, input_dir):
-        self.input_dir = "data/synthetic"
+        self.input_dir = input_dir
         self.db_handler = db_handler
 
     def find_schema(self, raw_line):
