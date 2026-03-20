@@ -69,7 +69,7 @@
             <h3 id="critical-banner-title">4 Critical Issues — ATM-12 offline (network outage)</h3>
           </div>
           <button class="button critical-button" type="button" data-screen-target="alerts">
-            Review alerts
+            View critical alerts
           </button>
         </section>
 
@@ -91,15 +91,15 @@
             <h3>Active issues</h3>
             <p class="metric-value">12</p>
             <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚠</span> Critical: 6 need immediate review</p>
-            <p class="metric-subnote">Timeouts, dispenser faults, and printer issues</p>
+            <p class="metric-subnote">Common: timeouts, dispenser faults</p>
             <p class="metric-link-hint">View issues <span aria-hidden="true">→</span></p>
           </article>
           <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open alerts page. 4 critical issues, 2 are blocking withdrawals.">
             <h3>Critical</h3>
             <p class="metric-value">4</p>
             <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚠</span> Critical: 2 are blocking withdrawals</p>
-            <p class="metric-subnote">Immediate attention required</p>
-            <p class="metric-link-hint">Review alerts <span aria-hidden="true">→</span></p>
+            <p class="metric-subnote">Immediate action required</p>
+            <p class="metric-link-hint">View critical alerts <span aria-hidden="true">→</span></p>
           </article>
         </div>
 
@@ -107,7 +107,7 @@
           <section class="panel panel-hero" aria-labelledby="priority-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Priority anomaly</p>
+                <p class="eyebrow">Current Critical Incident</p>
                 <h3 id="priority-title">ATM-12 OFFLINE</h3>
               </div>
               <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical</span>
@@ -138,6 +138,11 @@
                 </div>
               </div>
             </div>
+            <div class="next-action-card" aria-labelledby="next-action-title">
+              <span class="next-action-label"><span class="next-action-icon" aria-hidden="true">→</span> Next best action</span>
+              <p id="next-action-title"><strong>Restart network connection at ATM-12</strong></p>
+              <p class="next-action-note">Use this first because the failure pattern points to branch connectivity loss rather than a hardware fault.</p>
+            </div>
             <div class="button-row">
               <button class="button" type="button" data-screen-target="atm-detail">Open ATM detail</button>
               <button class="button button-secondary" type="button" data-screen-target="action-center">Take action</button>
@@ -146,7 +151,10 @@
 
           <section class="panel panel-support panel-graph" aria-labelledby="trend-title">
             <div class="panel-header">
-              <h3 id="trend-title">Error Trend (Last 6 Hours)</h3>
+              <div>
+                <h3 id="trend-title">Error Trend (Last 6 Hours)</h3>
+                <p class="graph-context"><span aria-hidden="true">⚠</span> Spike indicates network instability</p>
+              </div>
               <span class="legend">Errors per hour</span>
             </div>
             <div class="trend-chart trend-chart-line" role="img" aria-label="Line graph showing a sharp spike in errors at 10:12, marked with a red anomaly point.">
@@ -302,6 +310,11 @@
             <div class="recommendation-card">
               <h4>Recommended next step</h4>
               <p>Run a remote network diagnostic. If packet loss remains high, notify branch staff and escalate to the network team.</p>
+            </div>
+            <div class="next-action-card next-action-card-detail" aria-labelledby="detail-next-action-title">
+              <span class="next-action-label"><span class="next-action-icon" aria-hidden="true">→</span> Next best action</span>
+              <p id="detail-next-action-title"><strong>Restart network connection at ATM-12</strong></p>
+              <p class="next-action-note">This is the fastest low-risk step to confirm whether the outage is caused by temporary branch-side connectivity failure.</p>
             </div>
           </section>
 
