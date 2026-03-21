@@ -68,8 +68,13 @@ class LogCleaner:
 
             type_list = exp_type if isinstance(exp_type, tuple) else (exp_type,)
 
-            for t in type_list:
+            null_fields = ["None", "Null", ""]
 
+            if target is None or str(target).strip() in null_fields:
+                clean_log[field] = None
+                continue
+
+            for t in type_list:
                 try:
                     if t is type(None):
                         clean_log[field] = None
