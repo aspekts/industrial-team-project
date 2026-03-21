@@ -1,0 +1,17 @@
+# --- Core data ---
+pandas>=2.2
+numpy>=1.26
+
+# --- ML ---
+scikit-learn>=1.4       # Isolation Forest
+
+# --- Visualisation ---
+plotly>=5.20
+dash>=2.16              # Dashboard framework
+
+# --- Testing ---
+pytest>=8.1
+pytest-cov>=5.0
+
+# --- Linting ---
+ruff>=0.4
