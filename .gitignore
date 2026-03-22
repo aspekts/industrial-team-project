@@ -36,6 +36,7 @@ Logs/
 loaded_logs/
 data/clean/
 data/raw/
+data/synthetic/
 
 # Editor
 .vscode/
