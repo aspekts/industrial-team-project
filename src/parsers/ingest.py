@@ -23,7 +23,7 @@ OutputFolder = "data/raw"
 
 try:
     os.mkdir(OutputFolder)
-except:
+except OSError:
     print("Output folder already exists, continuing...")
 
 

@@ -1,9 +1,7 @@
-import json
 import csv
 import os
 
 from src.cleaning.schemas import LOG_SCHEMAS
-from src.cleaning.database import DatabaseHandler
 
 class LogCleaner:
     def __init__(self, db_handler, input_dir):
@@ -82,7 +80,7 @@ class LogCleaner:
                     
                     clean_log[field] = t(target)
                     break
-                except:
+                except Exception:
                     continue
 
         return clean_log
@@ -113,7 +111,7 @@ class LogCleaner:
                             continue
                         
                         buffer.append((schema, clean_line))
-                    except:
+                    except Exception:
                         continue
 
                     if len(buffer) >= batch_size:

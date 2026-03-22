@@ -10,11 +10,11 @@ class DatabaseHandler:
         if isinstance(py_type, tuple):
             py_type = py_type[0]
             
-        if py_type == int:
+        if py_type is int:
             return "INTEGER"
-        elif py_type == float:
+        elif py_type is float:
             return "REAL"
-        elif py_type == str:
+        elif py_type is str:
             return "TEXT"
         else:
             return "TEXT" # Default fallback
