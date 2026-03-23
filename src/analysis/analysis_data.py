@@ -1,5 +1,4 @@
 import sqlite3
-from src.cleaning.schemas import LOG_SCHEMAS
 
 class AnalysisData:
     def __init__(self, db_path="data/clean/atm_logs.db"):
