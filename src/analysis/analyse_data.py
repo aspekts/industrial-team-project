@@ -1,4 +1,5 @@
-import sqlite3, configparser
+import sqlite3
+import configparser
 
 class AnalyseData:
     def __init__(self, db_path="data/clean/atm_logs.db"):
