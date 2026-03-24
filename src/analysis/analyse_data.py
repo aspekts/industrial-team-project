@@ -1,7 +1,9 @@
-import sqlite3
+import sqlite3, configparser
 
-class AnalysisData:
+class AnalyseData:
     def __init__(self, db_path="data/clean/atm_logs.db"):
+        self.config = configparser.ConfigParser()
+        self.config.read("src/analysis/config.ini")
         self.db_path = db_path
     
     def check_network_errors(self):
@@ -14,13 +16,13 @@ class AnalysisData:
 
             # ATM App Log signals:
             # 1) event_type=NETWORK_DISCONNECT + error_code=ERR-0040
-            # 2) event_type=TIMEOUT + response_time_ms=30000
+            # 2) event_type=TIMEOUT + response_time_ms= 30000 (configurable via config.ini)
             cursor.execute(
-                """
+                f"""
                 SELECT 'ATMA' AS source, *
                 FROM ATMA
                 WHERE (event_type = 'NETWORK_DISCONNECT' AND error_code = 'ERR-0040')
-                   OR (event_type = 'TIMEOUT' AND response_time_ms = 30000)
+                   OR (event_type = 'TIMEOUT' AND response_time_ms = {self.config.get('NETWORK', 'timeout')})
                 """
             )
             errors.extend(dict(row) for row in cursor.fetchall())
@@ -97,27 +99,27 @@ class AnalysisData:
             cursor = conn.cursor()
 
             # Prometheus signals:
-            # - jvm_memory_used_bytes > 1GB (high memory usage)
-            # - jvm_gc_pause_seconds_sum > 10s (GC thrashing)
-            # - process_cpu_usage > 0.9 (high CPU, possibly from GC)
+            # - jvm_memory_used_bytes > 1GB (high memory usage) (configurable via config.ini)
+            # - jvm_gc_pause_seconds_sum > 10s (GC thrashing) (configurable via config.ini)
+            # - process_cpu_usage > 0.9 (high CPU, possibly from GC) (configurable via config.ini)
             cursor.execute(
-                """
+                f"""
                 SELECT 'PROM' AS source, *
                 FROM PROM
-                WHERE (metric_name = 'jvm_memory_used_bytes' AND metric_value > 1000000000)
-                   OR (metric_name = 'jvm_gc_pause_seconds_sum' AND metric_value > 10)
-                   OR (metric_name = 'process_cpu_usage' AND metric_value > 0.9)
+                WHERE (metric_name = 'jvm_memory_used_bytes' AND metric_value > {self.config.get('MEMORY', 'threshold_bytes')})
+                   OR (metric_name = 'jvm_gc_pause_seconds_sum' AND metric_value > {self.config.get('GC', 'gc_pause_threshold_seconds')})
+                   OR (metric_name = 'process_cpu_usage' AND metric_value > {self.config.get('CPU', 'threshold_usage')})
                 """
             )
             findings.extend(dict(row) for row in cursor.fetchall())
 
             # GCP signals:
-            # - cpu_usage_percent > 90% (high CPU, correlated with memory issues)
+            # - cpu_usage_percent > 90% (high CPU, correlated with memory issues) (configurable via config.ini)
             cursor.execute(
-                """
+                f"""
                 SELECT 'GCP' AS source, *
                 FROM GCP
-                WHERE cpu_usage_percent > 90
+                WHERE cpu_usage_percent > {self.config.get('CPU', 'threshold_usage') * 100}
                 """
             )
             findings.extend(dict(row) for row in cursor.fetchall())
@@ -178,16 +180,16 @@ class AnalysisData:
             cursor = conn.cursor()
 
             # Kafka signals:
-            # - response_time_ms spikes to 3200ms then 30000ms
-            # - transaction_success_rate drops from 100% to 72% to 50%
-            # - failure_count increases to 8 then 14
+            # - response_time_ms spikes to 3200ms then 30000ms (configurable via config.ini)
+            # - transaction_success_rate drops from 100% to 72% to 50% (configurable via config.ini)
+            # - failure_count increases to 8 then 14 (configurable via config.ini)
             cursor.execute(
-                """
+                f"""
                 SELECT 'KAFK' AS source, *
                 FROM KAFK
-                WHERE response_time_ms IN (3200, 30000)
-                   OR transaction_success_rate IN (72, 50)
-                   OR failure_count IN (8, 14)
+                WHERE response_time_ms IN ({self.config.get('PERFORMANCE', 'response_time_thresholds')})
+                   OR transaction_success_rate IN ({self.config.get('TRANSACTION', 'success_rate_thresholds')})
+                   OR failure_count IN ({self.config.get('TRANSACTION', 'failure_count_thresholds')})
                 """
             )
             findings.extend(dict(row) for row in cursor.fetchall())
@@ -203,16 +205,16 @@ class AnalysisData:
             cursor = conn.cursor()
 
             # Windows OS Metrics signals:
-            # - memory_usage_percent escalating to > 90%
-            # - network_errors growing to > 20
-            # - cpu_usage_percent rising to > 90%
+            # - memory_usage_percent escalating to > 90% (configurable via config.ini)
+            # - network_errors growing to > 20 (configurable via config.ini)
+            # - cpu_usage_percent rising to > 90% (configurable via config.ini)
             cursor.execute(
-                """
+                f"""
                 SELECT 'WINOS' AS source, *
                 FROM WINOS
-                WHERE memory_usage_percent > 90
-                   OR network_errors > 20
-                   OR cpu_usage_percent > 90
+                WHERE memory_usage_percent > {self.config.get('MEMORY', 'threshold_percent')}
+                   OR network_errors > {self.config.get('NETWORK', 'error_threshold')}
+                   OR cpu_usage_percent >  {self.config.get('CPU', 'threshold_usage') * 100}
                 """
             )
             findings.extend(dict(row) for row in cursor.fetchall())
