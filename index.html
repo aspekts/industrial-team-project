@@ -71,23 +71,18 @@
 
         <nav class="sidebar-nav" aria-label="Primary">
           <button class="nav-link is-active" type="button" data-screen-target="dashboard" aria-current="page">
-            <span class="nav-icon" aria-hidden="true">▣</span>
             <span>Dashboard</span>
           </button>
           <button class="nav-link" type="button" data-screen-target="atm-detail">
-            <span class="nav-icon" aria-hidden="true">◫</span>
             <span>ATM detail</span>
           </button>
           <button class="nav-link" type="button" data-screen-target="atm-list">
-            <span class="nav-icon" aria-hidden="true">◫</span>
             <span>ATM list</span>
           </button>
           <button class="nav-link nav-link-alert" type="button" data-screen-target="alerts">
-            <span class="nav-icon" aria-hidden="true">⚠</span>
             <span>Alerts</span>
           </button>
           <button class="nav-link" type="button" data-screen-target="settings">
-            <span class="nav-icon" aria-hidden="true">⚙</span>
             <span>Settings</span>
           </button>
         </nav>
@@ -101,7 +96,7 @@
             <h2 id="dashboard-title">Estate command view</h2>
             <p>See estate-wide health, isolate abnormal patterns quickly, and route work into the right response queue.</p>
           </div>
-          <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> 4 critical groups · 126 active incidents</span>
+          <span class="status-pill status-critical">4 critical groups · 126 active incidents</span>
         </div>
 
         <section class="critical-banner critical-banner-compact" aria-labelledby="critical-banner-title">
@@ -119,28 +114,28 @@
             <h3>Monitored assets</h3>
             <p class="metric-value">12,480</p>
             <p class="metric-note">248 sites across 42 regions</p>
-            <p class="metric-link-hint">View asset inventory <span aria-hidden="true">→</span></p>
+            <p class="metric-link-hint">View asset inventory</p>
           </article>
           <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="dashboard" aria-label="View service coverage. 97.8 percent of assets are within policy thresholds.">
             <h3>Coverage within SLA</h3>
             <p class="metric-value">97.8%</p>
-            <p class="metric-note"><span class="status-inline status-inline-healthy" aria-hidden="true">✔</span> 12,206 assets operating normally</p>
+            <p class="metric-note">12,206 assets operating normally</p>
             <p class="metric-subnote">Estate health by policy, not by single device</p>
-            <p class="metric-link-hint">Review service posture <span aria-hidden="true">→</span></p>
+            <p class="metric-link-hint">Review service posture</p>
           </article>
           <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open incident queues. 126 incidents are active and 18 need immediate review.">
             <h3>Active incidents</h3>
             <p class="metric-value">126</p>
-            <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚠</span> 18 require immediate routing</p>
+            <p class="metric-note">18 require immediate routing</p>
             <p class="metric-subnote">Clustered into 4 major service-impact groups</p>
-            <p class="metric-link-hint">Open incident queues <span aria-hidden="true">→</span></p>
+            <p class="metric-link-hint">Open incident queues</p>
           </article>
           <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open telemetry summary. 2.4 million events per minute are being processed with 99.94 percent pipeline availability.">
             <h3>Event throughput</h3>
             <p class="metric-value">2.4M</p>
-            <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚡</span> Events processed per minute</p>
+            <p class="metric-note">Events processed per minute</p>
             <p class="metric-subnote">99.94% ingestion pipeline availability</p>
-            <p class="metric-link-hint">Inspect data flow <span aria-hidden="true">→</span></p>
+            <p class="metric-link-hint">Inspect data flow</p>
           </article>
         </div>
 
@@ -169,7 +164,7 @@
                 <p class="eyebrow">Priority incident cluster</p>
                 <h3 id="priority-title">Central region connectivity degradation</h3>
               </div>
-              <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical</span>
+              <span class="status-pill status-critical">Critical</span>
             </div>
             <div class="incident-scan-list" role="list" aria-label="Priority anomaly summary">
               <div class="incident-scan-item" role="listitem">
@@ -198,7 +193,7 @@
               </div>
             </div>
             <div class="next-action-card" aria-labelledby="next-action-title">
-              <span class="next-action-label"><span class="next-action-icon" aria-hidden="true">→</span> Next best action</span>
+              <span class="next-action-label">Next best action</span>
               <p id="next-action-title"><strong>Trigger regional network diagnostics and freeze duplicate alert fan-out</strong></p>
               <p class="next-action-note">For large estates, the first step is to validate the shared failure domain and suppress noise before assigning asset-level work.</p>
             </div>
@@ -212,7 +207,7 @@
             <div class="panel-header">
               <div>
                 <h3 id="trend-title">Cross-region anomaly trend (Last 6 Hours)</h3>
-                <p class="graph-context"><span aria-hidden="true">⚠</span> Shared spike suggests upstream network instability rather than isolated device faults</p>
+                <p class="graph-context">Shared spike suggests upstream network instability rather than isolated device faults</p>
               </div>
               <span class="legend">Clustered failures per hour</span>
             </div>
@@ -259,21 +254,21 @@
                   <strong>Network operations</strong>
                   <p>4 active clusters, 12 assets blocked, SLA risk in Central</p>
                 </div>
-                <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> P1 · 14 min</span>
+                <span class="status-pill status-critical">P1 · 14 min</span>
               </li>
               <li>
                 <div>
                   <strong>Field service</strong>
                   <p>9 site visits queued after hardware confidence crossed threshold</p>
                 </div>
-                <span class="status-pill status-warning"><span aria-hidden="true">⚠</span> P2 · 31 min</span>
+                <span class="status-pill status-warning">P2 · 31 min</span>
               </li>
               <li>
                 <div>
                   <strong>Security review</strong>
                   <p>2 tamper events waiting for branch confirmation and camera checks</p>
                 </div>
-                <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> P1 · 5 min</span>
+                <span class="status-pill status-critical">P1 · 5 min</span>
               </li>
             </ul>
           </section>
@@ -331,7 +326,7 @@
             <h2 id="detail-title">ATM-12: Oxford Street Branch</h2>
             <p>This page explains the anomaly, shows supporting evidence, and recommends the next operator action.</p>
           </div>
-          <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical: offline</span>
+          <span class="status-pill status-critical">Critical: offline</span>
         </div>
 
         <section class="critical-banner critical-banner-detail" aria-labelledby="detail-banner-title">
@@ -371,7 +366,7 @@
               <p>Run a remote network diagnostic. If packet loss remains high, notify branch staff and escalate to the network team.</p>
             </div>
             <div class="next-action-card next-action-card-detail" aria-labelledby="detail-next-action-title">
-              <span class="next-action-label"><span class="next-action-icon" aria-hidden="true">→</span> Next best action</span>
+              <span class="next-action-label">Next best action</span>
               <p id="detail-next-action-title"><strong>Restart network connection at ATM-12</strong></p>
               <p class="next-action-note">This is the fastest low-risk step to confirm whether the outage is caused by temporary branch-side connectivity failure.</p>
             </div>
@@ -491,7 +486,7 @@
               <tr>
                 <th scope="row">ATM-12</th>
                 <td>Oxford Street</td>
-                <td><span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical: offline</span></td>
+                <td><span class="status-pill status-critical">Critical: offline</span></td>
                 <td>Network failure</td>
                 <td>10:14</td>
                 <td><button class="text-button" type="button" data-screen-target="atm-detail">Open</button></td>
@@ -499,7 +494,7 @@
               <tr>
                 <th scope="row">ATM-44</th>
                 <td>Paddington</td>
-                <td><span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical</span></td>
+                <td><span class="status-pill status-critical">Critical</span></td>
                 <td>Tamper sensor alert</td>
                 <td>10:23</td>
                 <td><button class="text-button" type="button" data-screen-target="alerts">Open</button></td>
@@ -507,7 +502,7 @@
               <tr>
                 <th scope="row">ATM-21</th>
                 <td>Soho</td>
-                <td><span class="status-pill status-warning"><span aria-hidden="true">⚠</span> Warning</span></td>
+                <td><span class="status-pill status-warning">Warning</span></td>
                 <td>Dispenser error rate rising</td>
                 <td>10:01</td>
                 <td><button class="text-button" type="button">Review</button></td>
@@ -515,7 +510,7 @@
               <tr>
                 <th scope="row">ATM-05</th>
                 <td>Victoria</td>
-                <td><span class="status-pill"><span aria-hidden="true">✔</span> Healthy</span></td>
+                <td><span class="status-pill">Healthy</span></td>
                 <td>No active issue</td>
                 <td>09:58</td>
                 <td><button class="text-button" type="button">View</button></td>
