@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ATM Network Operations Prototype</title>
+    <title>Operations Hub Prototype</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,13 +19,13 @@
       <aside class="sidebar" aria-label="Primary">
         <div class="sidebar-brand">
           <p class="eyebrow sidebar-eyebrow">Operations Console</p>
-          <h1>ATM Monitor</h1>
-          <p class="header-copy">Monitor ATM health, investigate anomalies, and respond to incidents.</p>
+          <h1>Operations Hub</h1>
+          <p class="header-copy">Track system health, investigate anomalies, and respond to incidents across the network.</p>
         </div>
 
         <label class="search-field sidebar-search">
-          <span class="sr-only">Search ATM, branch, or issue</span>
-          <input type="search" placeholder="Search ATM, branch, or issue" />
+          <span class="sr-only">Search asset, branch, region, or issue</span>
+          <input type="search" placeholder="Search asset, branch, region, or issue" />
         </label>
 
         <section class="accessibility-panel" aria-labelledby="accessibility-title">
@@ -42,6 +42,31 @@
           >
             Turn on larger display
           </button>
+        </section>
+
+        <section class="scale-panel" aria-labelledby="scale-panel-title">
+          <div class="scale-panel-header">
+            <p class="eyebrow">Portfolio view</p>
+            <h2 id="scale-panel-title" class="sidebar-panel-title">Scaled operations footprint</h2>
+          </div>
+          <dl class="scale-list">
+            <div class="scale-item">
+              <dt>Regions</dt>
+              <dd>42</dd>
+            </div>
+            <div class="scale-item">
+              <dt>Sites</dt>
+              <dd>248</dd>
+            </div>
+            <div class="scale-item">
+              <dt>Assets</dt>
+              <dd>12,480</dd>
+            </div>
+            <div class="scale-item">
+              <dt>Events / min</dt>
+              <dd>2.4M</dd>
+            </div>
+          </dl>
         </section>
 
         <nav class="sidebar-nav" aria-label="Primary">
@@ -73,105 +98,123 @@
         <div class="screen-header">
           <div>
             <p class="eyebrow">Dashboard</p>
-            <h2 id="dashboard-title">System Status</h2>
-            <p>See overall health, spot unusual behaviour quickly, and move directly into the highest-priority issue.</p>
+            <h2 id="dashboard-title">Estate command view</h2>
+            <p>See estate-wide health, isolate abnormal patterns quickly, and route work into the right response queue.</p>
           </div>
-          <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical: 4 alerts</span>
+          <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> 4 critical groups · 126 active incidents</span>
         </div>
 
         <section class="critical-banner critical-banner-compact" aria-labelledby="critical-banner-title">
           <div class="critical-banner-copy">
             <p class="eyebrow critical-eyebrow">Immediate action needed</p>
-            <h3 id="critical-banner-title">4 Critical Issues — ATM-12 offline (network outage)</h3>
+            <h3 id="critical-banner-title">Critical network cluster in Central region impacting 12 assets across 3 sites</h3>
           </div>
           <button class="button critical-button" type="button" data-screen-target="alerts">
-            View critical alerts
+            View escalation queues
           </button>
         </section>
 
         <div class="metric-grid">
-          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open ATM list. 120 ATMs across 18 branches.">
-            <h3>Total ATMs</h3>
-            <p class="metric-value">120</p>
-            <p class="metric-note">18 branches monitored</p>
-            <p class="metric-link-hint">View ATM list <span aria-hidden="true">→</span></p>
+          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open asset list. 12,480 monitored assets across 248 sites.">
+            <h3>Monitored assets</h3>
+            <p class="metric-value">12,480</p>
+            <p class="metric-note">248 sites across 42 regions</p>
+            <p class="metric-link-hint">View asset inventory <span aria-hidden="true">→</span></p>
           </article>
-          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open ATM list. 104 ATMs are healthy and no action is needed.">
-            <h3>Healthy</h3>
-            <p class="metric-value">104</p>
-            <p class="metric-note"><span class="status-inline status-inline-healthy" aria-hidden="true">✔</span> Healthy: stable now</p>
-            <p class="metric-subnote">No operator action needed</p>
-            <p class="metric-link-hint">View healthy ATMs <span aria-hidden="true">→</span></p>
+          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="dashboard" aria-label="View service coverage. 97.8 percent of assets are within policy thresholds.">
+            <h3>Coverage within SLA</h3>
+            <p class="metric-value">97.8%</p>
+            <p class="metric-note"><span class="status-inline status-inline-healthy" aria-hidden="true">✔</span> 12,206 assets operating normally</p>
+            <p class="metric-subnote">Estate health by policy, not by single device</p>
+            <p class="metric-link-hint">Review service posture <span aria-hidden="true">→</span></p>
           </article>
-          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open ATM list. 12 active issues, 6 need immediate review.">
-            <h3>Active issues</h3>
-            <p class="metric-value">12</p>
-            <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚠</span> Critical: 6 need immediate review</p>
-            <p class="metric-subnote">Common: timeouts, dispenser faults</p>
-            <p class="metric-link-hint">View issues <span aria-hidden="true">→</span></p>
+          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open incident queues. 126 incidents are active and 18 need immediate review.">
+            <h3>Active incidents</h3>
+            <p class="metric-value">126</p>
+            <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚠</span> 18 require immediate routing</p>
+            <p class="metric-subnote">Clustered into 4 major service-impact groups</p>
+            <p class="metric-link-hint">Open incident queues <span aria-hidden="true">→</span></p>
           </article>
-          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open alerts page. 4 critical issues, 2 are blocking withdrawals.">
-            <h3>Critical</h3>
-            <p class="metric-value">4</p>
-            <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚠</span> Critical: 2 are blocking withdrawals</p>
-            <p class="metric-subnote">Immediate action required</p>
-            <p class="metric-link-hint">View critical alerts <span aria-hidden="true">→</span></p>
+          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open telemetry summary. 2.4 million events per minute are being processed with 99.94 percent pipeline availability.">
+            <h3>Event throughput</h3>
+            <p class="metric-value">2.4M</p>
+            <p class="metric-note"><span class="status-inline status-inline-critical" aria-hidden="true">⚡</span> Events processed per minute</p>
+            <p class="metric-subnote">99.94% ingestion pipeline availability</p>
+            <p class="metric-link-hint">Inspect data flow <span aria-hidden="true">→</span></p>
           </article>
+        </div>
+
+        <div class="info-grid">
+          <section class="info-card" aria-labelledby="freshness-title">
+            <p class="eyebrow">Scale principle</p>
+            <h3 id="freshness-title">Data freshness over raw volume</h3>
+            <p class="metric-subnote">Operators need to trust that the view is current. Surface freshness and coverage first, then let deep investigation happen in lower-level pages.</p>
+          </section>
+          <section class="info-card" aria-labelledby="ownership-title">
+            <p class="eyebrow">Implementation implication</p>
+            <h3 id="ownership-title">Queues should map to owning teams</h3>
+            <p class="metric-subnote">At large scale, routing matters more than listing every alert. Incident groups should align with network, field, platform, and security ownership.</p>
+          </section>
+          <section class="info-card" aria-labelledby="summary-title">
+            <p class="eyebrow">Implementation implication</p>
+            <h3 id="summary-title">Aggregate first, drill down second</h3>
+            <p class="metric-subnote">The UI should open at region, service, and queue level. Individual asset timelines become secondary evidence views, not the main dashboard surface.</p>
+          </section>
         </div>
 
         <div class="dashboard-grid">
           <section class="panel panel-hero" aria-labelledby="priority-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Current Critical Incident</p>
-                <h3 id="priority-title">ATM-12 OFFLINE</h3>
+                <p class="eyebrow">Priority incident cluster</p>
+                <h3 id="priority-title">Central region connectivity degradation</h3>
               </div>
               <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical</span>
             </div>
             <div class="incident-scan-list" role="list" aria-label="Priority anomaly summary">
               <div class="incident-scan-item" role="listitem">
                 <div>
-                  <span class="incident-scan-label">Last seen</span>
-                  <p><strong>14 min ago</strong></p>
+                  <span class="incident-scan-label">Incident group</span>
+                  <p><strong>12 impacted assets at 3 sites</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
-                  <span class="incident-scan-label">Cause</span>
-                  <p><strong>Network failure</strong></p>
+                  <span class="incident-scan-label">Signal</span>
+                  <p><strong>Branch and router telemetry are aligned</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
                   <span class="incident-scan-label">Impact</span>
-                  <p><strong>Withdrawals unavailable</strong></p>
+                  <p><strong>Withdrawal and assisted-service delays rising</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
-                  <span class="incident-scan-label">Action</span>
-                  <p><strong>Check router / restart connection</strong></p>
+                  <span class="incident-scan-label">Routing</span>
+                  <p><strong>Network team owner with field standby</strong></p>
                 </div>
               </div>
             </div>
             <div class="next-action-card" aria-labelledby="next-action-title">
               <span class="next-action-label"><span class="next-action-icon" aria-hidden="true">→</span> Next best action</span>
-              <p id="next-action-title"><strong>Restart network connection at ATM-12</strong></p>
-              <p class="next-action-note">Use this first because the failure pattern points to branch connectivity loss rather than a hardware fault.</p>
+              <p id="next-action-title"><strong>Trigger regional network diagnostics and freeze duplicate alert fan-out</strong></p>
+              <p class="next-action-note">For large estates, the first step is to validate the shared failure domain and suppress noise before assigning asset-level work.</p>
             </div>
             <div class="button-row">
-              <button class="button" type="button" data-screen-target="atm-detail">Open ATM detail</button>
-              <button class="button button-secondary" type="button" data-screen-target="action-center">Take action</button>
+              <button class="button" type="button" data-screen-target="alerts">Open incident queue</button>
+              <button class="button button-secondary" type="button" data-screen-target="action-center">Record response plan</button>
             </div>
           </section>
 
           <section class="panel panel-support panel-graph" aria-labelledby="trend-title">
             <div class="panel-header">
               <div>
-                <h3 id="trend-title">Error Trend (Last 6 Hours)</h3>
-                <p class="graph-context"><span aria-hidden="true">⚠</span> Spike indicates network instability</p>
+                <h3 id="trend-title">Cross-region anomaly trend (Last 6 Hours)</h3>
+                <p class="graph-context"><span aria-hidden="true">⚠</span> Shared spike suggests upstream network instability rather than isolated device faults</p>
               </div>
-              <span class="legend">Errors per hour</span>
+              <span class="legend">Clustered failures per hour</span>
             </div>
             <div class="trend-chart trend-chart-line" role="img" aria-label="Line graph showing a sharp spike in errors at 10:12, marked with a red anomaly point.">
               <svg viewBox="0 0 520 240" class="svg-graph svg-graph-large" aria-hidden="true">
@@ -191,12 +234,12 @@
                 <span>10:12</span>
                 <span>12:00</span>
               </div>
-              <p class="chart-caption">The graph shows a clear error spike just before ATM-12 dropped offline, supporting the anomaly diagnosis.</p>
+              <p class="chart-caption">The trend shows multiple sites moving together, which is the key visual cue for shared-cause detection in a large estate.</p>
             </div>
             <div class="mini-graph" role="img" aria-label="Line graph placeholder showing stable network health before a sharp drop at the final point.">
               <div class="mini-graph-header">
-                <span>Network health score</span>
-                <strong>62%</strong>
+                <span>Telemetry freshness</span>
+                <strong>97 sec lag</strong>
               </div>
               <svg viewBox="0 0 320 120" class="svg-graph" aria-hidden="true">
                 <path d="M12 92 C48 88, 66 82, 98 70 S160 40, 192 44 S246 52, 308 102" />
@@ -207,30 +250,30 @@
 
           <section class="panel panel-support" aria-labelledby="alerts-summary-title">
             <div class="panel-header">
-              <h3 id="alerts-summary-title">Critical alerts</h3>
+              <h3 id="alerts-summary-title">Escalation queues</h3>
               <button class="text-button" type="button" data-screen-target="alerts">See all</button>
             </div>
             <ul class="alert-list">
               <li>
                 <div>
-                  <strong>ATM-12</strong>
-                  <p>Offline due to network failure</p>
+                  <strong>Network operations</strong>
+                  <p>4 active clusters, 12 assets blocked, SLA risk in Central</p>
                 </div>
-                <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical · 14 min</span>
+                <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> P1 · 14 min</span>
               </li>
               <li>
                 <div>
-                  <strong>ATM-44</strong>
-                  <p>Tamper sensor triggered</p>
+                  <strong>Field service</strong>
+                  <p>9 site visits queued after hardware confidence crossed threshold</p>
                 </div>
-                <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> Critical · 5 min</span>
+                <span class="status-pill status-warning"><span aria-hidden="true">⚠</span> P2 · 31 min</span>
               </li>
               <li>
                 <div>
-                  <strong>ATM-21</strong>
-                  <p>Cash dispenser error rate rising</p>
+                  <strong>Security review</strong>
+                  <p>2 tamper events waiting for branch confirmation and camera checks</p>
                 </div>
-                <span class="status-pill status-warning"><span aria-hidden="true">⚠</span> Warning · 22 min</span>
+                <span class="status-pill status-critical"><span aria-hidden="true">⚠</span> P1 · 5 min</span>
               </li>
             </ul>
           </section>
@@ -238,40 +281,40 @@
           <section class="panel panel-support panel-table" aria-labelledby="region-title">
             <div class="panel-header">
               <h3 id="region-title">Regional health snapshot</h3>
-              <button class="text-button" type="button" data-screen-target="atm-list">View ATMs</button>
+              <button class="text-button" type="button" data-screen-target="atm-list">View assets</button>
             </div>
             <table>
               <caption class="sr-only">Regional ATM health snapshot</caption>
               <thead>
                 <tr>
                   <th scope="col">Region</th>
-                  <th scope="col">Healthy</th>
-                  <th scope="col">Issues</th>
-                  <th scope="col">Common issue</th>
+                  <th scope="col">Coverage</th>
+                  <th scope="col">Open clusters</th>
+                  <th scope="col">Dominant risk</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <th scope="row">Central</th>
-                  <td>28</td>
+                  <td>95.2%</td>
                   <td>4</td>
                   <td>Network instability</td>
                 </tr>
                 <tr>
                   <th scope="row">North</th>
-                  <td>21</td>
-                  <td>3</td>
-                  <td>Receipt printer faults</td>
+                  <td>98.1%</td>
+                  <td>2</td>
+                  <td>Cash handling hardware</td>
                 </tr>
                 <tr>
                   <th scope="row">South</th>
-                  <td>25</td>
-                  <td>2</td>
-                  <td>Low cash warnings</td>
+                  <td>99.1%</td>
+                  <td>1</td>
+                  <td>Cash depletion forecasting</td>
                 </tr>
                 <tr>
                   <th scope="row">West</th>
-                  <td>30</td>
+                  <td>97.4%</td>
                   <td>3</td>
                   <td>Card reader errors</td>
                 </tr>
@@ -414,7 +457,7 @@
           </div>
         </div>
 
-        <section class="panel" aria-labelledby="filters-title">
+        <section class="panel atm-list-panel atm-list-filters" aria-labelledby="filters-title">
           <div class="panel-header">
             <h3 id="filters-title">Filters</h3>
           </div>
@@ -427,7 +470,7 @@
           </div>
         </section>
 
-        <section class="panel" aria-labelledby="table-title">
+        <section class="panel atm-list-panel atm-list-table-panel" aria-labelledby="table-title">
           <div class="panel-header">
             <h3 id="table-title">ATM status table</h3>
             <span class="legend">Sorted by severity and last update</span>
