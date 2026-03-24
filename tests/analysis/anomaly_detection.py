@@ -1,6 +1,6 @@
 # Assuming data is imported and cleaned into the atm_logs.db sqlite database.
 
-from src.analysis.analysis_data import AnalysisData
+from analysis.analyse_data import AnalysisData
 
 def test_check_network_errors():
     analysis = AnalysisData(db_path="data/clean/atm_logs.db")

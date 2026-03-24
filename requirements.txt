@@ -16,3 +16,6 @@ pytest-cov>=5.0
 
 # --- Linting ---
 ruff>=0.4
+
+# --- Config Parsing ---
+configparser>=3.14
