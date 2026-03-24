@@ -40,6 +40,8 @@ data/raw/*
 !data/raw/.gitkeep
 data/synthetic/*
 !data/synthetic/.gitkeep
+data/logs/*
+!data/logs/.gitkeep
 
 # Editor
 .vscode/
