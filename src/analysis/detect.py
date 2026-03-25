@@ -60,7 +60,7 @@ class Detection:
             print("-----------------------------------------------")
 
         kafka_events_detections = self.analyse_data.check_kafka_events()
-        
+
         if kafka_events_detections:
             print("------ Kafka Event Anomalies Detected ------")
             self.process_kafka_events_detections(kafka_events_detections)
@@ -160,7 +160,6 @@ class Detection:
             if source == 'WINOS':
                 timestamp = detection.get('timestamp')
                 atm_id = detection.get('atm_id')
-                error = ""
                 cpu = detection.get('cpu_usage_percent')
                 memory = detection.get('memory_usage_percent')
                 network = detection.get('network_errors')
