@@ -73,7 +73,7 @@ class LogFilter:
         return True
     
     # time validation 
-    def time_validation(self, timestamp)
+    def time_validation(self, timestamp): 
         
         try:
             ts = datetime.fromisoformat(timestamp)
