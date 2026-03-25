@@ -60,7 +60,7 @@ class Detection:
             print("-----------------------------------------------")
 
         kafka_events_detections = self.analyse_data.check_kafka_events()
-
+        
         if kafka_events_detections:
             print("------ Kafka Event Anomalies Detected ------")
             self.process_kafka_events_detections(kafka_events_detections)
@@ -159,10 +159,14 @@ class Detection:
             
             if source == 'WINOS':
                 timestamp = detection.get('timestamp')
-                metric_name = detection.get('metric_name')
-                metric_value = detection.get('metric_value')
+                atm_id = detection.get('atm_id')
+                error = ""
+                cpu = detection.get('cpu_usage_percent')
+                memory = detection.get('memory_usage_percent')
+                network = detection.get('network_errors')
+                metric_value = f"CPU: {cpu}%, Memory: {memory}%, Network: {network}"
                 
-                print(f"Windows OS metrics anomaly detected from {source} at {timestamp}. Details: {metric_name} - {metric_value}")
+                print(f"Windows OS metrics anomaly detected from {source} at {timestamp}. Details: {atm_id} - {metric_value}")
 
     def process_kafka_events_detections(self, detections):
         for detection in detections:
@@ -170,7 +174,7 @@ class Detection:
             
             if source == 'KAFK':
                 timestamp = detection.get('timestamp')
-                event_type = detection.get('event_type')
+                atm_id = detection.get('atm_id')
                 event_details = detection.get('event_details')
                 
-                print(f"Kafka event anomaly detected from {source} at {timestamp}. Details: {event_type} - {event_details}")
+                print(f"Kafka event anomaly detected from {source} at {timestamp}. Details: {atm_id} - {event_details}")
