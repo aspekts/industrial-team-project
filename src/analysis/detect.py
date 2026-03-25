@@ -67,64 +67,70 @@ class Detection:
             print("-------------------------------------------")
 
     def process_network_detections(self, detections):
-
         for detection in detections:
             source = detection.get('source')
+            atm_id = detection.get('atm_id')
             
             if source == 'KAFK':
                 timestamp = detection.get('timestamp')
                 transaction_failure_reason = detection.get('transaction_failure_reason')
                 
-                print(f"Network anomaly detected from {source} at {timestamp}. Details: {transaction_failure_reason}")
+                print(f"A1 Network anomaly detected from {source} at {timestamp}. Details: {atm_id} - {transaction_failure_reason}")
             elif source == 'ATMA':
                 timestamp = detection.get('timestamp')
                 error_detail = detection.get('error_detail')
                 error_code = detection.get('error_code')
                 
-                print(f"Network anomaly detected from {source} at {timestamp}. Details: {error_code} - {error_detail}")
+                print(f"Network anomaly detected from {source} at {timestamp}. Details: {atm_id} - {error_code} - {error_detail}")
             elif source == 'TERM':
                 timestamp = detection.get('timestamp')
                 message = detection.get('message')
                 
-                print(f"Network anomaly detected from {source} at {timestamp}. Details: {message}")
+                print(f"A1 Network anomaly detected from {source} at {timestamp}. Details: {atm_id} - {message}")
+
+        return True
 
     def process_cassette_detections(self, detections):
         for detection in detections:
             source = detection.get('source')
+            atm_id = detection.get('atm_id')
             
             if source == 'KAFK':
                 timestamp = detection.get('timestamp')
                 transaction_failure_reason = detection.get('transaction_failure_reason')
                 
-                print(f"Cash cassette depletion anomaly detected from {source} at {timestamp}. Details: {transaction_failure_reason}")
+                print(f"A2 Cash cassette depletion anomaly detected from {source} at {timestamp}. Details: {atm_id} - {transaction_failure_reason}")
             elif source == 'ATMH':
                 timestamp = detection.get('timestamp')
                 message = detection.get('message')
                 severity = detection.get('severity')
                 
-                print(f"Cash cassette depletion anomaly detected from {source} at {timestamp}. Details: {severity} - {message}")
+                print(f"A2 Cash cassette depletion anomaly detected from {source} at {timestamp}. Details: {atm_id} - {severity} - {message}")
+
+        return True
 
     def process_memory_leak_detections(self, detections):
         # for detection in detections:
         #     source = detection.get('source')
+        #   atm_id = detection.get('atm_id')
             
         #     if source == 'PROM':
         #         timestamp = detection.get('timestamp')
         #         metric_name = detection.get('metric_name')
         #         metric_value = detection.get('metric_value')
                 
-        #         print(f"Memory leak anomaly detected from {source} at {timestamp}. Details: {metric_name} - {metric_value}")
+        #         print(f"A3 Memory leak anomaly detected from {source} at {timestamp}. Details: {atm_id} - {metric_name} - {metric_value}")
         #     elif source == 'GCP':
         #         timestamp = detection.get('timestamp')
         #         message = detection.get('message')
         #         severity = detection.get('severity')
                 
-        #         print(f"Memory leak anomaly detected from {source} at {timestamp}. Details: {severity} - {message}")
+        #         print(f"A3 Memory leak anomaly detected from {source} at {timestamp}. Details: {atm_id} - {severity} - {message}")
         #     elif source == 'TERM':
         #         timestamp = detection.get('timestamp')
         #         message = detection.get('message')
                 
-        #         print(f"Memory leak anomaly detected from {source} at {timestamp}. Details: {message}")
+        #         print(f"A3 Memory leak anomaly detected from {source} at {timestamp}. Details: {atm_id} - {message}")
         pass
 
     def process_container_restart_detections(self, detections):
@@ -136,12 +142,14 @@ class Detection:
             #     message = detection.get('message')
             #     severity = detection.get('severity')
                 
-            #     print(f"Container restart anomaly detected from {source} at {timestamp}. Details: {severity} - {message}")
+            #     print(f"A4 Container restart anomaly detected from {source} at {timestamp}. Details: {severity} - {message}")
             if source == 'TERM':
                 timestamp = detection.get('timestamp')
                 message = detection.get('message')
+                atm_id = detection.get('atm_id')
                 
-                print(f"Container restart anomaly detected from {source} at {timestamp}. Details: {message}")
+                print(f"A4 Container restart anomaly detected from {source} at {timestamp}. Details: {atm_id} - {message}")
+        return True
 
     def process_performance_degradation_detections(self, detections):
         for detection in detections:
@@ -150,8 +158,10 @@ class Detection:
             if source == 'KAFK':
                 timestamp = detection.get('timestamp')
                 transaction_failure_reason = detection.get('transaction_failure_reason')
+                atm_id = detection.get('atm_id')
                 
-                print(f"Performance degradation anomaly detected from {source} at {timestamp}. Details: {transaction_failure_reason}")
+                print(f"A5 Performance degradation anomaly detected from {source} at {timestamp}. Details: {atm_id} - {transaction_failure_reason}")
+        return True
 
     def process_windows_os_metrics_detections(self, detections):
         for detection in detections:
@@ -165,7 +175,8 @@ class Detection:
                 network = detection.get('network_errors')
                 metric_value = f"CPU: {cpu}%, Memory: {memory}%, Network: {network}"
                 
-                print(f"Windows OS metrics anomaly detected from {source} at {timestamp}. Details: {atm_id} - {metric_value}")
+                print(f"A6 Windows OS metrics anomaly detected from {source} at {timestamp}. Details: {atm_id} - {metric_value}")
+        return True
 
     def process_kafka_events_detections(self, detections):
         for detection in detections:
@@ -175,5 +186,6 @@ class Detection:
                 timestamp = detection.get('timestamp')
                 atm_id = detection.get('atm_id')
                 event_details = detection.get('event_details')
-                
-                print(f"Kafka event anomaly detected from {source} at {timestamp}. Details: {atm_id} - {event_details}")
+
+                print(f"A7 Kafka event anomaly detected from {source} at {timestamp}. Details: {atm_id} - {event_details}")
+        return True

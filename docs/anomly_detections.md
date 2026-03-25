@@ -177,3 +177,11 @@ Synthetic data includes explicit anomaly tags in `_anomaly` field (or `None` for
 
 - The dataset includes an `_anomaly` field for validation: `None` means normal, non-null means injected scenario.
 - Ensure any new anomaly rule stays simple, traceable, and mirror synthetic injection logic for explainability.
+
+## 8. Limitations and assumptions
+
+### 8.1 Assumptions
+- The files assumes that `atm_logs.db` file is populated with clean data and that the `config.ini` file is setup with data already.
+
+### 8.2 Limitations
+- The file is currently not able to detect anomalies that are not specified already in the file.
