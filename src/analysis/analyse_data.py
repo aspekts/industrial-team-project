@@ -6,6 +6,16 @@ class AnalyseData:
         self.config = configparser.ConfigParser()
         self.config.read("src/analysis/config.ini")
         self.db_path = db_path
+
+    def _get_int(self, section, option):
+        return self.config.getint(section, option)
+
+    def _get_float(self, section, option):
+        return self.config.getfloat(section, option)
+
+    def _get_list(self, section, option, cast=float):
+        value = self.config.get(section, option)
+        return [cast(item.strip()) for item in value.split(',') if item.strip()]
     
     def check_network_errors(self):
         """Detect network error signatures across ATMA/KAFK/TERM data"""
@@ -18,13 +28,15 @@ class AnalyseData:
             # ATM App Log signals:
             # 1) event_type=NETWORK_DISCONNECT + error_code=ERR-0040
             # 2) event_type=TIMEOUT + response_time_ms= 30000 (configurable via config.ini)
+            timeout_value = self._get_int('NETWORK', 'timeout')
             cursor.execute(
-                f"""
+                """
                 SELECT 'ATMA' AS source, *
                 FROM ATMA
                 WHERE (event_type = 'NETWORK_DISCONNECT' AND error_code = 'ERR-0040')
-                   OR (event_type = 'TIMEOUT' AND response_time_ms = {self.config.get('NETWORK', 'timeout')})
-                """
+                   OR (event_type = 'TIMEOUT' AND response_time_ms = ?)
+                """,
+                (timeout_value,)
             )
             errors.extend(dict(row) for row in cursor.fetchall())
 
@@ -103,25 +115,31 @@ class AnalyseData:
             # - jvm_memory_used_bytes > 1GB (high memory usage) (configurable via config.ini)
             # - jvm_gc_pause_seconds_sum > 10s (GC thrashing) (configurable via config.ini)
             # - process_cpu_usage > 0.9 (high CPU, possibly from GC) (configurable via config.ini)
+            threshold_bytes = self._get_int('MEMORY', 'threshold_bytes')
+            gc_pause_threshold = self._get_float('GC', 'gc_pause_threshold_seconds')
+            cpu_threshold = self._get_float('CPU', 'threshold_usage')
             cursor.execute(
-                f"""
+                """
                 SELECT 'PROM' AS source, *
                 FROM PROM
-                WHERE (metric_name = 'jvm_memory_used_bytes' AND metric_value > {self.config.get('MEMORY', 'threshold_bytes')})
-                   OR (metric_name = 'jvm_gc_pause_seconds_sum' AND metric_value > {self.config.get('GC', 'gc_pause_threshold_seconds')})
-                   OR (metric_name = 'process_cpu_usage' AND metric_value > {self.config.get('CPU', 'threshold_usage')})
-                """
+                WHERE (metric_name = 'jvm_memory_used_bytes' AND metric_value > ?)
+                   OR (metric_name = 'jvm_gc_pause_seconds_sum' AND metric_value > ?)
+                   OR (metric_name = 'process_cpu_usage' AND metric_value > ?)
+                """,
+                (threshold_bytes, gc_pause_threshold, cpu_threshold),
             )
             findings.extend(dict(row) for row in cursor.fetchall())
 
             # GCP signals:
             # - cpu_usage_percent > 90% (high CPU, correlated with memory issues) (configurable via config.ini)
+            cpu_usage_threshold = self._get_float('CPU', 'threshold_usage') * 100
             cursor.execute(
-                f"""
+                """
                 SELECT 'GCP' AS source, *
                 FROM GCP
-                WHERE cpu_usage_percent > {self.config.get('CPU', 'threshold_usage') * 100}
-                """
+                WHERE cpu_usage_percent > ?
+                """,
+                (cpu_usage_threshold,),
             )
             findings.extend(dict(row) for row in cursor.fetchall())
 
@@ -184,14 +202,23 @@ class AnalyseData:
             # - response_time_ms spikes to 3200ms then 30000ms (configurable via config.ini)
             # - transaction_success_rate drops from 100% to 72% to 50% (configurable via config.ini)
             # - failure_count increases to 8 then 14 (configurable via config.ini)
+            resp_times = self._get_list('PERFORMANCE', 'response_time_thresholds', int)
+            success_rates = self._get_list('TRANSACTION', 'success_rate_thresholds', float)
+            failure_counts = self._get_list('TRANSACTION', 'failure_count_thresholds', int)
+
+            resp_placeholders = ','.join('?' for _ in resp_times) if resp_times else 'NULL'
+            success_placeholders = ','.join('?' for _ in success_rates) if success_rates else 'NULL'
+            failure_placeholders = ','.join('?' for _ in failure_counts) if failure_counts else 'NULL'
+
             cursor.execute(
                 f"""
                 SELECT 'KAFK' AS source, *
                 FROM KAFK
-                WHERE response_time_ms IN ({self.config.get('PERFORMANCE', 'response_time_thresholds')})
-                   OR transaction_success_rate IN ({self.config.get('TRANSACTION', 'success_rate_thresholds')})
-                   OR failure_count IN ({self.config.get('TRANSACTION', 'failure_count_thresholds')})
-                """
+                WHERE response_time_ms IN ({resp_placeholders})
+                   OR transaction_success_rate IN ({success_placeholders})
+                   OR failure_count IN ({failure_placeholders})
+                """,
+                (*resp_times, *success_rates, *failure_counts),
             )
             findings.extend(dict(row) for row in cursor.fetchall())
 
@@ -209,14 +236,19 @@ class AnalyseData:
             # - memory_usage_percent escalating to > 90% (configurable via config.ini)
             # - network_errors growing to > 20 (configurable via config.ini)
             # - cpu_usage_percent rising to > 90% (configurable via config.ini)
+            memory_threshold = self._get_float('MEMORY', 'threshold_percent')
+            network_threshold = self._get_int('NETWORK', 'error_threshold')
+            cpu_threshold_pct = self._get_float('CPU', 'threshold_usage') * 100
+
             cursor.execute(
-                f"""
+                """
                 SELECT 'WINOS' AS source, *
                 FROM WINOS
-                WHERE memory_usage_percent > {self.config.get('MEMORY', 'threshold_percent')}
-                   OR network_errors > {self.config.get('NETWORK', 'error_threshold')}
-                   OR cpu_usage_percent >  {self.config.get('CPU', 'threshold_usage') * 100}
-                """
+                WHERE memory_usage_percent > ?
+                   OR network_errors > ?
+                   OR cpu_usage_percent > ?
+                """,
+                (memory_threshold, network_threshold, cpu_threshold_pct),
             )
             findings.extend(dict(row) for row in cursor.fetchall())
 
