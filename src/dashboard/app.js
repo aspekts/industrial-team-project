@@ -20,14 +20,162 @@ const roleViewConfig = {
   admin: {
     defaultScreen: "dashboard",
     allowedScreens: ["dashboard", "alerts", "settings"],
+    dashboardTitle: "Admin platform view",
+    dashboardDescription: "Review source readiness, session access, and configuration surfaces before live data is connected.",
+    dashboardStatus: "Unavailable",
+    bannerEyebrow: "Admin focus",
+    bannerTitle: "Configuration, policy, and source-health summaries will appear here.",
+    primaryActionLabel: "Review alert surfaces",
   },
   manager: {
     defaultScreen: "dashboard",
     allowedScreens: ["dashboard", "atm-list", "alerts"],
+    dashboardTitle: "Manager summary view",
+    dashboardDescription: "Review summary-level operational posture, ATM coverage, and grouped anomaly demand.",
+    dashboardStatus: "Loading...",
+    bannerEyebrow: "Manager focus",
+    bannerTitle: "Summary metrics and grouped exceptions will appear here.",
+    primaryActionLabel: "Review grouped anomalies",
   },
   ops: {
     defaultScreen: "alerts",
     allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "action-center"],
+    dashboardTitle: "Ops investigation view",
+    dashboardDescription: "Focus on anomaly triage, ATM detail, and action workflows as live signals become available.",
+    dashboardStatus: "Loading...",
+    bannerEyebrow: "Ops focus",
+    bannerTitle: "The highest-priority operational signal will appear here.",
+    primaryActionLabel: "Open investigation queue",
+  },
+};
+const roleCardContent = {
+  admin: {
+    observedAtms: {
+      title: "Source readiness",
+      note: "Awaiting source availability summary from the backend.",
+      subnote: "Use this card for pipeline readiness, not hardcoded estate counts.",
+      hint: "View source readiness",
+    },
+    atmAppErrors: {
+      title: "Access model",
+      note: "Awaiting persona and entitlement summary from the backend.",
+      subnote: "Admin views should expose controls and access state, not frontline incident detail.",
+      hint: "Review role access",
+    },
+    hardwareAlerts: {
+      title: "Policy exceptions",
+      note: "Awaiting threshold and exception counts from the backend.",
+      subnote: "Use this card for policy-impacting exceptions once a config endpoint exists.",
+      hint: "Review policy exceptions",
+    },
+    eventThroughput: {
+      title: "Backend status",
+      note: "Awaiting runtime and ingestion summary from the backend.",
+      subnote: "Use this card for platform health, restart signals, and service status.",
+      hint: "Inspect backend status",
+    },
+  },
+  manager: {
+    observedAtms: {
+      title: "ATM coverage",
+      note: "Awaiting ATM coverage summary from the backend.",
+      subnote: "Use this card for managed estate visibility once live summary data is available.",
+      hint: "View ATM coverage",
+    },
+    atmAppErrors: {
+      title: "Anomaly groups",
+      note: "Awaiting grouped anomaly totals from the backend.",
+      subnote: "Managers need grouped demand and summary counts rather than individual evidence events.",
+      hint: "Review anomaly groups",
+    },
+    hardwareAlerts: {
+      title: "Queue pressure",
+      note: "Awaiting queue and escalation summary from the backend.",
+      subnote: "Use this card for backlog pressure once queue endpoints are available.",
+      hint: "Review queue pressure",
+    },
+    eventThroughput: {
+      title: "Transaction summary",
+      note: "Awaiting throughput summary from the backend.",
+      subnote: "Use this card for reporting-level transaction flow rather than ATM-level event detail.",
+      hint: "Inspect transaction summary",
+    },
+  },
+  ops: {
+    observedAtms: {
+      title: "Assigned ATMs",
+      note: "Awaiting ATM assignment or coverage summary from the backend.",
+      subnote: "Use this card for the operator's current working set once that API exists.",
+      hint: "View assigned ATMs",
+    },
+    atmAppErrors: {
+      title: "ATM app errors",
+      note: "Awaiting ATMA error totals from the backend.",
+      subnote: "Use this card for frontline error counts and active ATM issues.",
+      hint: "Review ATM errors",
+    },
+    hardwareAlerts: {
+      title: "Hardware alerts",
+      note: "Awaiting ATMH warning and critical totals from the backend.",
+      subnote: "Use this card for hardware faults that need direct operational follow-up.",
+      hint: "Open hardware alerts",
+    },
+    eventThroughput: {
+      title: "Event throughput",
+      note: "Awaiting KAFK throughput summary from the backend.",
+      subnote: "Use this card for event and queue flow that affects operator response speed.",
+      hint: "Inspect event throughput",
+    },
+  },
+};
+const roleChartContent = {
+  admin: {
+    anomalyTrend: {
+      ready: {
+        titleSelector: "Source readiness trend",
+        contextSelector: "Awaiting platform-level readiness and runtime metrics from the backend.",
+        captionSelector: "This chart should show source and backend readiness for the admin persona.",
+        legendSelector: "Unavailable",
+      },
+    },
+    hostPressure: {
+      ready: {
+        headerLabelSelector: "Backend health",
+        headerValueSelector: "Unavailable",
+      },
+    },
+  },
+  manager: {
+    anomalyTrend: {
+      ready: {
+        titleSelector: "Operational summary trend",
+        contextSelector: "Awaiting grouped anomaly and throughput summary from the backend.",
+        captionSelector: "This chart should show reporting-level operational movement for the manager persona.",
+        legendSelector: "Loading...",
+      },
+    },
+    hostPressure: {
+      ready: {
+        headerLabelSelector: "Summary health",
+        headerValueSelector: "Loading...",
+      },
+    },
+  },
+  ops: {
+    anomalyTrend: {
+      ready: {
+        titleSelector: "Investigation trend",
+        contextSelector: "Awaiting triage-oriented anomaly data from the backend.",
+        captionSelector: "This chart should show the active operational signal the ops user needs to investigate.",
+        legendSelector: "Loading...",
+      },
+    },
+    hostPressure: {
+      ready: {
+        headerLabelSelector: "Supporting metric",
+        headerValueSelector: "Loading...",
+      },
+    },
   },
 };
 
@@ -72,6 +220,7 @@ function buildMetricCardState(card) {
     return null;
   }
 
+  const titleNode = card.querySelector("h3");
   const valueNode = card.querySelector(".metric-value");
   const noteNode = card.querySelector(".metric-note");
   const subnoteNode = card.querySelector(".metric-subnote");
@@ -79,11 +228,13 @@ function buildMetricCardState(card) {
 
   return {
     card,
+    titleNode,
     valueNode,
     noteNode,
     subnoteNode,
     hintNode,
     fallback: {
+      title: getTrimmedText(titleNode),
       value: getTrimmedText(valueNode),
       note: getTrimmedText(noteNode),
       subnote: getTrimmedText(subnoteNode),
@@ -138,6 +289,7 @@ function setMetricCardState(metricKey, mode, payload = {}) {
   }
 
   const fallback = state.fallback;
+  const title = payload.title ?? fallback.title;
   const value = payload.value ?? fallback.value;
   const note = payload.note ?? fallback.note;
   const subnote = payload.subnote ?? fallback.subnote;
@@ -147,6 +299,10 @@ function setMetricCardState(metricKey, mode, payload = {}) {
   state.card.dataset.uiState = mode;
   state.card.setAttribute("aria-busy", String(mode === uiStateModes.LOADING));
   state.card.setAttribute("aria-label", ariaLabel);
+
+  if (state.titleNode) {
+    state.titleNode.textContent = title;
+  }
 
   if (state.valueNode) {
     if (mode === uiStateModes.LOADING) {
@@ -261,6 +417,36 @@ function initializeDashboardUiState() {
   };
 }
 
+function setTextContent(selector, value) {
+  const node = document.querySelector(selector);
+  if (node && typeof value === "string") {
+    node.textContent = value;
+  }
+}
+
+function applyRoleDashboardCopy() {
+  setTextContent("#dashboard-title", activeRoleConfig.dashboardTitle);
+  setTextContent("#dashboard-title + p", activeRoleConfig.dashboardDescription);
+  setTextContent("#dashboard .screen-header .status-pill", activeRoleConfig.dashboardStatus);
+  setTextContent(".critical-banner .critical-eyebrow", activeRoleConfig.bannerEyebrow);
+  setTextContent("#critical-banner-title", activeRoleConfig.bannerTitle);
+
+  const primaryActionButton = document.querySelector(".critical-button");
+  if (primaryActionButton) {
+    primaryActionButton.textContent = activeRoleConfig.primaryActionLabel;
+  }
+
+  const cardsForRole = roleCardContent[dashboardRole] || roleCardContent.ops;
+  Object.entries(cardsForRole).forEach(([metricKey, payload]) => {
+    setMetricCardState(metricKey, uiStateModes.READY, payload);
+  });
+
+  const chartsForRole = roleChartContent[dashboardRole] || roleChartContent.ops;
+  Object.entries(chartsForRole).forEach(([chartKey, payload]) => {
+    setChartState(chartKey, uiStateModes.READY, payload);
+  });
+}
+
 function configureRoleView() {
   document.body.dataset.dashboardRole = dashboardRole;
   document.body.dataset.dashboardRoleLabel = dashboardRoleLabel;
@@ -372,6 +558,7 @@ window.addEventListener("hashchange", () => {
 setLargeUi(loadLargeUiPreference());
 initializeDashboardUiState();
 configureRoleView();
+applyRoleDashboardCopy();
 
 const initialTargetId = window.location.hash.replace("#", "") || activeRoleConfig.defaultScreen;
 showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : activeRoleConfig.defaultScreen);

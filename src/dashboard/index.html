@@ -102,7 +102,7 @@
         <section class="critical-banner critical-banner-compact" aria-labelledby="critical-banner-title">
           <div class="critical-banner-copy">
             <p class="eyebrow critical-eyebrow">Immediate action needed</p>
-            <h3 id="critical-banner-title">ATM-GB-0003 shows cash depletion followed by a host disconnect sequence</h3>
+            <h3 id="critical-banner-title">A role-specific priority summary will appear here when the dashboard is connected to a live endpoint.</h3>
           </div>
           <button class="button critical-button" type="button" data-screen-target="alerts">
             View anomaly groups
@@ -162,41 +162,41 @@
           <section class="panel panel-hero" aria-labelledby="priority-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Priority correlated anomaly</p>
-                <h3 id="priority-title">ATM-GB-0003 cash depletion followed by host disconnect</h3>
+                <p class="eyebrow">Priority item</p>
+                <h3 id="priority-title">Loading role-specific summary...</h3>
               </div>
-              <span class="status-pill status-critical">A1 + A2</span>
+              <span class="status-pill status-critical">Loading...</span>
             </div>
             <div class="incident-scan-list" role="list" aria-label="Priority anomaly summary">
               <div class="incident-scan-item" role="listitem">
                 <div>
-                  <span class="incident-scan-label">Hardware signal</span>
-                  <p><strong>ATMH cassette note count reached 0 by 09:15</strong></p>
+                  <span class="incident-scan-label">Primary signal</span>
+                  <p><strong>Loading...</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
-                  <span class="incident-scan-label">Stream signal</span>
-                  <p><strong>KAFK shifted from CASH_DISPENSE_ERROR to HOST_UNAVAILABLE</strong></p>
+                  <span class="incident-scan-label">Secondary signal</span>
+                  <p><strong>Unavailable until backend data is connected.</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
-                  <span class="incident-scan-label">Application signal</span>
-                  <p><strong>ATMA logged ERR-0040 and ERR-0041 at 10:00</strong></p>
+                  <span class="incident-scan-label">Impact</span>
+                  <p><strong>Unavailable until backend data is connected.</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
-                  <span class="incident-scan-label">Correlated sources</span>
-                  <p><strong>ATMA, ATMH, KAFK, and TERM all contain supporting evidence</strong></p>
+                  <span class="incident-scan-label">Next review area</span>
+                  <p><strong>Unavailable until backend data is connected.</strong></p>
                 </div>
               </div>
             </div>
             <div class="next-action-card" aria-labelledby="next-action-title">
               <span class="next-action-label">Next best action</span>
-              <p id="next-action-title"><strong>Inspect the ATM-GB-0003 cassette depletion and reconnect sequence before adding new UI claims</strong></p>
-              <p class="next-action-note">This anomaly is defensible because each step appears in source records rather than in hardcoded portfolio-level summaries.</p>
+              <p id="next-action-title"><strong>Connect the relevant summary endpoint for this persona.</strong></p>
+              <p class="next-action-note">This panel is intentionally written as a shell so live data can replace it without another structural rewrite.</p>
             </div>
             <div class="button-row">
               <button class="button" type="button" data-screen-target="alerts">Open anomaly groups</button>
@@ -207,12 +207,12 @@
           <section class="panel panel-support panel-graph" aria-labelledby="trend-title">
             <div class="panel-header">
               <div>
-                <h3 id="trend-title">Correlated anomaly sequence on 2026-03-05</h3>
-                <p class="graph-context">ATMH depletion is followed by Kafka transaction failures and then ATM application disconnect errors</p>
+                <h3 id="trend-title">Loading chart...</h3>
+                <p class="graph-context">This chart is ready for a live summary endpoint.</p>
               </div>
-              <span class="legend">A2 to A1 sequence</span>
+              <span class="legend">Loading...</span>
             </div>
-            <div class="trend-chart trend-chart-line" role="img" aria-label="Line graph showing ATM-GB-0003 anomaly intensity rising through the morning before a critical point near 10:00.">
+            <div class="trend-chart trend-chart-line" role="img" aria-label="Line graph placeholder for a live role-specific summary trend.">
               <svg viewBox="0 0 520 240" class="svg-graph svg-graph-large" aria-hidden="true">
                 <line x1="20" y1="200" x2="500" y2="200" class="axis-line" />
                 <line x1="20" y1="150" x2="500" y2="150" class="grid-line" />
@@ -222,15 +222,15 @@
                 <circle cx="340" cy="36" r="8" class="anomaly-point" />
                 <line x1="340" y1="36" x2="340" y2="200" class="anomaly-guide" />
                 <rect x="312" y="8" width="146" height="34" rx="10" class="anomaly-label-box" />
-                <text x="326" y="30" class="anomaly-text">Critical at 10:00</text>
+                <text x="326" y="30" class="anomaly-text">Loading...</text>
               </svg>
               <div class="chart-axis-labels">
                 <span>08:00</span>
                 <span>09:00</span>
-                <span>09:15</span>
-                <span>10:00</span>
+                <span>Loading...</span>
+                <span>Loading...</span>
               </div>
-              <p class="chart-caption">The sequence is intentionally tied to one ATM because the available data supports ATM-level correlation, not unsupported regional rollups.</p>
+              <p class="chart-caption">Live trend data will render here when the backend endpoint is available.</p>
             </div>
             <div class="mini-graph" role="img" aria-label="Line graph placeholder showing host pressure rising before the final anomaly point.">
               <div class="mini-graph-header">
@@ -330,17 +330,17 @@
         <div class="screen-header">
           <div>
             <p class="eyebrow">ATM detail</p>
-            <h2 id="detail-title">ATM-GB-0003: LOC-0303</h2>
-            <p>This page explains one source-backed anomaly chain using ATM application, hardware, Kafka, and terminal-handler evidence.</p>
+            <h2 id="detail-title">ATM detail view</h2>
+            <p>This page will show the selected ATM once a live detail endpoint is connected.</p>
           </div>
-          <span class="status-pill status-critical">Critical: host disconnect</span>
+          <span class="status-pill status-critical">Loading...</span>
         </div>
 
         <section class="critical-banner critical-banner-detail" aria-labelledby="detail-banner-title">
           <div>
             <p class="eyebrow critical-eyebrow">Critical service interruption</p>
-            <h3 id="detail-banner-title">Cash dispense flow degraded before the host disconnect</h3>
-            <p>Recommended response: verify cassette depletion first, then confirm whether the host reconnect at 10:02 cleared the ATM application timeout path.</p>
+            <h3 id="detail-banner-title">Selected ATM status will appear here</h3>
+            <p>Recommendations will remain unavailable until ATM-level API data is connected.</p>
           </div>
         </section>
 
@@ -353,29 +353,29 @@
             <dl class="summary-list">
               <div>
                 <dt>Anomaly detected</dt>
-                <dd>Cassette depletion followed by host disconnect and reconnect events</dd>
+                <dd>Loading...</dd>
               </div>
               <div>
                 <dt>Confidence</dt>
-                <dd>High confidence from ATMA, ATMH, KAFK, and TERM</dd>
+                <dd>Unavailable</dd>
               </div>
               <div>
                 <dt>Current impact</dt>
-                <dd>Cash dispense failures escalated into host-unavailable transaction windows</dd>
+                <dd>Unavailable</dd>
               </div>
               <div>
                 <dt>Likely root cause</dt>
-                <dd>Hardware depletion compounded by downstream host disconnect behaviour</dd>
+                <dd>Unavailable</dd>
               </div>
             </dl>
             <div class="recommendation-card">
               <h4>Recommended next step</h4>
-              <p>Check cassette replenishment timing, then compare the 10:00 disconnect in ATMA with the host-unavailable windows in KAFK and the TERM timeout.</p>
+              <p>Recommended action will render here when the ATM detail endpoint is available.</p>
             </div>
             <div class="next-action-card next-action-card-detail" aria-labelledby="detail-next-action-title">
               <span class="next-action-label">Next best action</span>
-              <p id="detail-next-action-title"><strong>Confirm whether ATM-GB-0003 recovered after the 10:02 reconnect event</strong></p>
-              <p class="next-action-note">That step is justified by the actual ATMA sequence and avoids inventing unsupported branch workflow states.</p>
+              <p id="detail-next-action-title"><strong>Loading...</strong></p>
+              <p class="next-action-note">Keep this panel generic until real ATM-level action data is available.</p>
             </div>
           </section>
 
@@ -397,20 +397,20 @@
             </div>
             <ol class="timeline">
               <li>
-                <strong>10:02</strong>
-                <p>ATMA records a network reconnect for ATM-GB-0003.</p>
+                <strong>Loading...</strong>
+                <p>Awaiting live event timeline.</p>
               </li>
               <li>
-                <strong>10:00</strong>
-                <p>ATMA logs ERR-0040 host disconnect and ERR-0041 timeout events.</p>
+                <strong>Loading...</strong>
+                <p>Awaiting live event timeline.</p>
               </li>
               <li>
-                <strong>09:30</strong>
-                <p>KAFK switches ATM-GB-0003 to repeated CASH_DISPENSE_ERROR windows.</p>
+                <strong>Loading...</strong>
+                <p>Awaiting live event timeline.</p>
               </li>
               <li>
-                <strong>09:15</strong>
-                <p>ATMH reports CASSETTE_EMPTY with note count at zero.</p>
+                <strong>Loading...</strong>
+                <p>Awaiting live event timeline.</p>
               </li>
             </ol>
           </section>
@@ -418,29 +418,29 @@
           <section class="panel" aria-labelledby="evidence-title">
             <h3 id="evidence-title">Evidence and explanation</h3>
             <div class="evidence-card">
-              <p class="evidence-label">ATMA</p>
-              <p>ATM-GB-0003 logs <code>ERR-0040</code> and <code>ERR-0041</code> during the disconnect window.</p>
+              <p class="evidence-label">Application source</p>
+              <p>Unavailable until backend data is connected.</p>
             </div>
             <div class="evidence-card">
-              <p class="evidence-label">ATMH</p>
-              <p>Cassette note count falls from warning thresholds to zero, ending in <code>CASSETTE_EMPTY</code>.</p>
+              <p class="evidence-label">Hardware source</p>
+              <p>Unavailable until backend data is connected.</p>
             </div>
             <div class="evidence-card">
-              <p class="evidence-label">KAFK + TERM</p>
-              <p>KAFK shows cash-dispense failures and host-unavailable windows while TERM records a matching network timeout.</p>
+              <p class="evidence-label">Stream and runtime sources</p>
+              <p>Unavailable until backend data is connected.</p>
             </div>
             <p class="explanation-note">
-              Because multiple independent sources show the same sequence, this page can explain the anomaly without leaning on unsupported portfolio abstractions.
+              The detail view is structured for live data injection rather than static demo values.
             </p>
           </section>
 
           <section class="panel" aria-labelledby="impact-title">
             <h3 id="impact-title">Service impact and response</h3>
             <ul class="simple-list">
-              <li><strong>Observed impact:</strong> Cash dispense errors followed by host-unavailable transaction windows</li>
-              <li><strong>Location code:</strong> LOC-0303</li>
-              <li><strong>Last reconnect event:</strong> 10:02 ATMA <code>NETWORK_CONNECT</code></li>
-              <li><strong>Correlated anomaly IDs:</strong> A1 and A2</li>
+              <li><strong>Observed impact:</strong> Loading...</li>
+              <li><strong>Location code:</strong> Unavailable</li>
+              <li><strong>Last event:</strong> Unavailable</li>
+              <li><strong>Correlated signals:</strong> Unavailable</li>
             </ul>
             <div class="button-row">
               <button class="button" type="button" data-screen-target="action-center">Take action</button>
@@ -491,35 +491,35 @@
             </thead>
             <tbody>
               <tr>
-                <th scope="row">ATM-GB-0003</th>
-                <td>LOC-0303</td>
-                <td><span class="status-pill status-critical">Critical</span></td>
-                <td>Cassette empty plus host disconnect</td>
-                <td>10:00</td>
+                <th scope="row">Loading...</th>
+                <td>Unavailable</td>
+                <td><span class="status-pill status-critical">Loading...</span></td>
+                <td>Unavailable until backend data is connected.</td>
+                <td>Unavailable</td>
                 <td><button class="text-button" type="button" data-screen-target="atm-detail">Open</button></td>
               </tr>
               <tr>
-                <th scope="row">ATM-GB-0002</th>
-                <td>LOC-0202</td>
-                <td><span class="status-pill status-critical">Critical</span></td>
-                <td>Timeout under host memory pressure</td>
-                <td>09:45</td>
+                <th scope="row">Loading...</th>
+                <td>Unavailable</td>
+                <td><span class="status-pill status-critical">Loading...</span></td>
+                <td>Unavailable until backend data is connected.</td>
+                <td>Unavailable</td>
                 <td><button class="text-button" type="button" data-screen-target="alerts">Open</button></td>
               </tr>
               <tr>
-                <th scope="row">ATM-GB-0001</th>
-                <td>LOC-0101</td>
-                <td><span class="status-pill status-warning">Warning</span></td>
-                <td>Network timeout burst</td>
-                <td>09:31</td>
+                <th scope="row">Loading...</th>
+                <td>Unavailable</td>
+                <td><span class="status-pill status-warning">Loading...</span></td>
+                <td>Unavailable until backend data is connected.</td>
+                <td>Unavailable</td>
                 <td><button class="text-button" type="button">Review</button></td>
               </tr>
               <tr>
-                <th scope="row">ATM-GB-0004</th>
-                <td>LOC-0404</td>
-                <td><span class="status-pill status-warning">Warning</span></td>
-                <td>Kafka stream ordering and malformed event markers</td>
-                <td>08:15</td>
+                <th scope="row">Loading...</th>
+                <td>Unavailable</td>
+                <td><span class="status-pill status-warning">Loading...</span></td>
+                <td>Unavailable until backend data is connected.</td>
+                <td>Unavailable</td>
                 <td><button class="text-button" type="button">View</button></td>
               </tr>
             </tbody>
@@ -540,11 +540,11 @@
           <section class="panel" aria-labelledby="group-critical-title">
             <h3 id="group-critical-title">Critical anomalies</h3>
             <details open>
-              <summary>3 correlated failures</summary>
+              <summary>Loading anomaly groups...</summary>
               <ul class="simple-list compact-list">
-                <li><strong>ATM-GB-0003:</strong> ATMH cassette depletion escalates into KAFK cash-dispense errors and ATMA host disconnects</li>
-                <li><strong>ATM-GB-0002:</strong> ATMA timeout aligns with WINOS memory pressure anomaly A6</li>
-                <li><strong>TERM runtime:</strong> OutOfMemoryError exceptions align with GCP restart activity</li>
+                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
+                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
+                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
               </ul>
             </details>
           </section>
@@ -552,10 +552,10 @@
           <section class="panel" aria-labelledby="group-warning-title">
             <h3 id="group-warning-title">Warning anomalies</h3>
             <details open>
-              <summary>2 lower-severity patterns</summary>
+              <summary>Loading anomaly groups...</summary>
               <ul class="simple-list compact-list">
-                <li><strong>ATM-GB-0001:</strong> Network timeout burst with degraded Kafka success rate</li>
-                <li><strong>ATM-GB-0004:</strong> Kafka out-of-order and malformed event markers require parser hardening</li>
+                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
+                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
               </ul>
             </details>
           </section>
@@ -585,8 +585,8 @@
         <div class="screen-header">
           <div>
             <p class="eyebrow">Action</p>
-            <h2 id="action-title">Respond to ATM-GB-0003</h2>
-            <p>Choose the next source-backed review step and record the operator response.</p>
+            <h2 id="action-title">Action center</h2>
+            <p>This page is ready for live recommendations once the relevant backend endpoint is connected.</p>
           </div>
         </div>
 
@@ -599,28 +599,28 @@
                 <label class="radio-card">
                   <input type="radio" name="action" checked />
                   <span>
-                    <strong>Verify cash cassette state</strong>
-                    <small>ATMH shows the earliest warning and the clearest hardware threshold breach.</small>
+                    <strong>Loading recommendation</strong>
+                    <small>Unavailable until backend data is connected.</small>
                   </span>
                 </label>
                 <label class="radio-card">
                   <input type="radio" name="action" />
                   <span>
-                    <strong>Review host reconnect evidence</strong>
-                    <small>Confirms whether the 10:02 ATMA reconnect ended the failure sequence.</small>
+                    <strong>Loading recommendation</strong>
+                    <small>Unavailable until backend data is connected.</small>
                   </span>
                 </label>
                 <label class="radio-card">
                   <input type="radio" name="action" />
                   <span>
-                    <strong>Escalate runtime investigation</strong>
-                    <small>Use if TERM and GCP pressure signals show the host-unavailable path is still active.</small>
+                    <strong>Loading recommendation</strong>
+                    <small>Unavailable until backend data is connected.</small>
                   </span>
                 </label>
               </fieldset>
               <label class="field">
                 <span>Operator note</span>
-                <textarea rows="4">ATM-GB-0003 reviewed against ATMA, ATMH, KAFK, and TERM. Confirming whether cassette depletion or downstream host instability remains active.</textarea>
+                <textarea rows="4">Waiting for live recommendation context from the backend.</textarea>
               </label>
               <button type="button" class="button" id="confirm-action">Confirm action</button>
             </form>
