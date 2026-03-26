@@ -87,7 +87,7 @@ def loadATMAppLog():
     with open(FILE_ATM_APP_LOG, 'r', encoding='utf-8') as InFile:
         records = json.load(InFile)
 
-    with open(OutputFolder + "/atm_application_log.txt", 'w', newline='', encoding='utf-8') as Outfile:
+    with open(OutputFolder + "/atm_application_logs.txt", 'w', newline='', encoding='utf-8') as Outfile:
         writer = csv.writer(Outfile)
 
         # write header row
@@ -139,7 +139,7 @@ def loadATMAppLog():
     print("  Rows written: " + str(count))
     if skippedCount > 0:
         print("  Rows skipped (malformed): " + str(skippedCount))
-    print("  Saved to: " + OutputFolder + "/atm_application_log.txt")
+    print("  Saved to: " + OutputFolder + "/atm_application_logs.txt")
 
 
 def loadATMHardwareLog():
@@ -151,7 +151,7 @@ def loadATMHardwareLog():
     with open(FILE_ATM_HW_LOG, 'r', encoding='utf-8') as InFile:
         records = json.load(InFile)
 
-    with open(OutputFolder + "/atm_hardware_sensor_log.txt", 'w', newline='', encoding='utf-8') as Outfile:
+    with open(OutputFolder + "/atm_hardware_sensor_logs.txt", 'w', newline='', encoding='utf-8') as Outfile:
         writer = csv.writer(Outfile)
 
         # write header row
@@ -196,7 +196,7 @@ def loadATMHardwareLog():
     print("  Rows written: " + str(count))
     if skippedCount > 0:
         print("  Rows skipped (malformed): " + str(skippedCount))
-    print("  Saved to: " + OutputFolder + "/atm_hardware_sensor_log.txt")
+    print("  Saved to: " + OutputFolder + "/atm_hardware_sensor_logs.txt")
 
 
 def loadTerminalHandlerLog():
@@ -525,8 +525,8 @@ def checkRowCounts():
     print("\nRow counts in output files:")
 
     files = [
-        "atm_application_log.txt",
-        "atm_hardware_sensor_log.txt",
+        "atm_application_logs.txt",
+        "atm_hardware_sensor_logs.txt",
         "terminal_handler_app_log.txt",
         "kafka_atm_metrics_stream.txt",
         "prometheus_metrics.txt",
