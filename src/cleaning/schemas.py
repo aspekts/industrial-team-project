@@ -16,7 +16,8 @@ LOG_SCHEMAS = {
         "error_detail": (str, type(None)),
         "atm_status": str,
         "os_version": (str, type(None)),
-        "app_version": str
+        "app_version": str,
+        "_anomaly": (str, type(None))
     },
     "ATMH": {
         "timestamp": str,
@@ -30,7 +31,8 @@ LOG_SCHEMAS = {
         "metric_value": (int, float, type(None)),
         "metric_unit": (str, type(None)),
         "threshold_value": (int, float, type(None)),
-        "firmware_version": (str, type(None))
+        "firmware_version": (str, type(None)),
+        "_anomaly": (str, type(None))
     },
     "TERM": {
         "timestamp": str,
@@ -51,7 +53,8 @@ LOG_SCHEMAS = {
         "exception_class": (str, type(None)),
         "exception_message": (str, type(None)),
         "db_query_time_ms": (int, type(None)),
-        "environment": str
+        "environment": str,
+        "_anomaly": (str, type(None))
     },
     "KAFK": {
         "timestamp": str,
@@ -63,11 +66,12 @@ LOG_SCHEMAS = {
         "response_time_ms": int,
         "transaction_volume": int,
         "transaction_success_rate": (int, float),
-        "transaction_failure_reason": str,
+        "transaction_failure_reason": (str, type(None)),
         "failure_count": int,
         "window_duration_seconds": int,
         "kafka_partition": (int, type(None)),
-        "kafka_offset": (int, type(None))
+        "kafka_offset": (int, type(None)),
+        "_anomaly": (str, type(None))
     },
     "PROM": {
         "timestamp": str,
@@ -79,7 +83,8 @@ LOG_SCHEMAS = {
         "container_id": (str, type(None)),
         "label_area": (str, type(None)),
         "label_env": (str, type(None)),
-        "help_text": (str, type(None))
+        "help_text": (str, type(None)),
+        "_anomaly": (str, type(None))
     },
     "WINOS": {
         "timestamp": str,
@@ -98,7 +103,8 @@ LOG_SCHEMAS = {
         "network_errors": (int, type(None)),
         "process_count": (int, type(None)),
         "system_uptime_seconds": (int, type(None)),
-        "event_log_errors_last_min": (int, type(None))
+        "event_log_errors_last_min": (int, type(None)),
+        "_anomaly": (str, type(None))
     },
     "GCP": {
         "timestamp": str,
@@ -117,6 +123,7 @@ LOG_SCHEMAS = {
         "restart_count": (int, type(None)),
         "label_app": (str, type(None)),
         "label_env": (str, type(None)),
-        "label_version": (str, type(None))
+        "label_version": (str, type(None)),
+        "_anomaly": (str, type(None))
     }
 }
