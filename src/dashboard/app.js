@@ -4,6 +4,7 @@ const confirmActionButton = document.getElementById("confirm-action");
 const confirmationCard = document.getElementById("confirmation-card");
 const clickableCards = document.querySelectorAll(".metric-card-action[data-screen-target]");
 const accessibilityToggle = document.getElementById("accessibility-toggle");
+const globalSearchInput = document.querySelector('.search-field input[type="search"]');
 const dashboardMetricCards = document.querySelectorAll(".metric-grid .metric-card");
 const anomalyTrendChart = document.querySelector(".trend-chart");
 const hostPressureChart = document.querySelector(".mini-graph");
@@ -29,7 +30,7 @@ const roleViewConfig = {
   },
   manager: {
     defaultScreen: "dashboard",
-    allowedScreens: ["dashboard", "atm-list", "alerts"],
+    allowedScreens: ["dashboard", "atm-list", "alerts", "settings"],
     dashboardTitle: "Manager summary view",
     dashboardDescription: "Review summary-level operational posture, ATM coverage, and grouped anomaly demand.",
     dashboardStatus: "Loading...",
@@ -38,8 +39,8 @@ const roleViewConfig = {
     primaryActionLabel: "Review grouped anomalies",
   },
   ops: {
-    defaultScreen: "alerts",
-    allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "action-center"],
+    defaultScreen: "dashboard",
+    allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "settings", "action-center"],
     dashboardTitle: "Ops investigation view",
     dashboardDescription: "Focus on anomaly triage, ATM detail, and action workflows as live signals become available.",
     dashboardStatus: "Loading...",
@@ -176,6 +177,69 @@ const roleChartContent = {
         headerValueSelector: "Loading...",
       },
     },
+  },
+};
+const roleScreenContent = {
+  admin: {
+    headerCopy: "Maintain cross-system visibility across source readiness, governance surfaces, and platform health.",
+    searchPlaceholder: "Search source, service, role access, or exception",
+    navLabels: {
+      dashboard: "Overview",
+      alerts: "Exceptions",
+      settings: "Settings",
+    },
+    alertsTitle: "Cross-system exception groups",
+    alertsDescription: "Review platform-wide exceptions, policy-impacting issues, and source-level concerns that need administrative visibility.",
+    criticalGroupTitle: "Platform exceptions",
+    warningGroupTitle: "Source watchlist",
+    settingsTitle: "Platform settings",
+    settingsDescription: "Review configuration areas, access controls, and operational policy surfaces.",
+  },
+  manager: {
+    headerCopy: "Track immediate ATM issues, local operational pressure, and the next items that need action.",
+    searchPlaceholder: "Search ATM, location, queue, or issue",
+    navLabels: {
+      dashboard: "Overview",
+      atmList: "ATM queue",
+      alerts: "Action queue",
+      settings: "Settings",
+    },
+    listTitle: "ATMs needing attention",
+    listDescription: "Review the ATM queue, local operational context, and the issues that need follow-up now.",
+    filtersTitle: "Operational filters",
+    tableTitle: "ATM action queue",
+    alertsTitle: "Immediate action queue",
+    alertsDescription: "Review grouped operational issues that need local follow-up, escalation, or manager visibility.",
+    criticalGroupTitle: "Needs action now",
+    warningGroupTitle: "Monitor locally",
+    settingsTitle: "Operational settings",
+    settingsDescription: "Review notifications and thresholds that affect local operational oversight.",
+  },
+  ops: {
+    headerCopy: "Investigate outages, telemetry spikes, and infrastructure health without losing access to ATM-level workflows.",
+    searchPlaceholder: "Search outage, telemetry, ATM, component, or error",
+    navLabels: {
+      dashboard: "Overview",
+      atmDetail: "Incident detail",
+      atmList: "ATM list",
+      alerts: "Incidents",
+      settings: "Settings",
+      actionCenter: "Action center",
+    },
+    detailTitle: "Technical incident detail",
+    detailDescription: "Use this page for ATM-level evidence, failure sequence review, and system troubleshooting context.",
+    listTitle: "ATM investigation queue",
+    listDescription: "Review ATM-level incidents, failure states, and the technical items that need investigation.",
+    filtersTitle: "Incident filters",
+    tableTitle: "ATM incident table",
+    alertsTitle: "Active incidents and telemetry spikes",
+    alertsDescription: "Review outage clusters, anomaly spikes, and infrastructure signals that need frontline technical response.",
+    criticalGroupTitle: "Critical incidents",
+    warningGroupTitle: "Telemetry watchlist",
+    actionTitle: "Technical action center",
+    actionDescription: "Use this page for immediate operational actions once live incident recommendations are available.",
+    settingsTitle: "Tool settings",
+    settingsDescription: "Review notification and threshold settings for technical operations.",
   },
 };
 
@@ -424,6 +488,13 @@ function setTextContent(selector, value) {
   }
 }
 
+function setInputPlaceholder(selector, value) {
+  const node = document.querySelector(selector);
+  if (node && typeof value === "string") {
+    node.setAttribute("placeholder", value);
+  }
+}
+
 function applyRoleDashboardCopy() {
   setTextContent("#dashboard-title", activeRoleConfig.dashboardTitle);
   setTextContent("#dashboard-title + p", activeRoleConfig.dashboardDescription);
@@ -445,6 +516,122 @@ function applyRoleDashboardCopy() {
   Object.entries(chartsForRole).forEach(([chartKey, payload]) => {
     setChartState(chartKey, uiStateModes.READY, payload);
   });
+
+  const screenContent = roleScreenContent[dashboardRole] || roleScreenContent.ops;
+  setTextContent(".header-copy", screenContent.headerCopy);
+  setInputPlaceholder('.search-field input[type="search"]', screenContent.searchPlaceholder);
+  setTextContent('#list-title', screenContent.listTitle);
+  setTextContent('#list-title + p', screenContent.listDescription);
+  setTextContent('#filters-title', screenContent.filtersTitle);
+  setTextContent('#table-title', screenContent.tableTitle);
+  setTextContent('#alerts-title-page', screenContent.alertsTitle);
+  setTextContent('#alerts-title-page + p', screenContent.alertsDescription);
+  setTextContent('#group-critical-title', screenContent.criticalGroupTitle);
+  setTextContent('#group-warning-title', screenContent.warningGroupTitle);
+  setTextContent('#settings-title', screenContent.settingsTitle);
+  setTextContent('#settings-title + p', screenContent.settingsDescription);
+  setTextContent('#detail-title', screenContent.detailTitle);
+  setTextContent('#detail-title + p', screenContent.detailDescription);
+  setTextContent('#action-title', screenContent.actionTitle);
+  setTextContent('#action-title + p', screenContent.actionDescription);
+
+  const navLabelMap = {
+    dashboard: document.querySelector('[data-screen-target="dashboard"] span'),
+    atmDetail: document.querySelector('[data-screen-target="atm-detail"] span'),
+    atmList: document.querySelector('[data-screen-target="atm-list"] span'),
+    alerts: document.querySelector('[data-screen-target="alerts"] span'),
+    settings: document.querySelector('[data-screen-target="settings"] span'),
+    actionCenter: document.querySelector('[data-screen-target="action-center"] span'),
+  };
+
+  Object.entries(screenContent.navLabels).forEach(([key, value]) => {
+    const node = navLabelMap[key];
+    if (node) {
+      node.textContent = value;
+    }
+  });
+}
+
+function normalizeSearchValue(value) {
+  return value.trim().toLowerCase();
+}
+
+function filterAtmRows(query) {
+  const atmRows = document.querySelectorAll("#atm-list tbody tr");
+  if (!atmRows.length) {
+    return false;
+  }
+
+  let hasMatch = false;
+  atmRows.forEach((row) => {
+    const rowText = normalizeSearchValue(row.textContent);
+    const isMatch = !query || rowText.includes(query);
+    row.hidden = !isMatch;
+    if (isMatch) {
+      hasMatch = true;
+    }
+  });
+
+  return hasMatch;
+}
+
+function getSearchableScreenIds() {
+  return Array.from(validScreenIds);
+}
+
+function findBestSearchTarget(query) {
+  const searchableScreenIds = getSearchableScreenIds();
+
+  for (const screenId of searchableScreenIds) {
+    const navLabel = document.querySelector(`[data-screen-target="${screenId}"] span`);
+    if (navLabel && normalizeSearchValue(navLabel.textContent).includes(query)) {
+      return screenId;
+    }
+  }
+
+  for (const screenId of searchableScreenIds) {
+    const screen = document.getElementById(screenId);
+    if (screen && normalizeSearchValue(screen.textContent).includes(query)) {
+      return screenId;
+    }
+  }
+
+  return null;
+}
+
+function applySearch(query) {
+  const normalizedQuery = normalizeSearchValue(query);
+
+  if (!normalizedQuery) {
+    filterAtmRows("");
+    if (globalSearchInput) {
+      globalSearchInput.setCustomValidity("");
+    }
+    return;
+  }
+
+  const matchedAtmRows = filterAtmRows(normalizedQuery);
+  if (matchedAtmRows && validScreenIds.has("atm-list")) {
+    navigateToScreen("atm-list");
+    if (globalSearchInput) {
+      globalSearchInput.setCustomValidity("");
+    }
+    return;
+  }
+
+  const targetScreenId = findBestSearchTarget(normalizedQuery);
+  if (targetScreenId) {
+    navigateToScreen(targetScreenId);
+    if (globalSearchInput) {
+      globalSearchInput.setCustomValidity("");
+    }
+    return;
+  }
+
+  if (globalSearchInput) {
+    globalSearchInput.setCustomValidity("No matching dashboard content found.");
+    globalSearchInput.reportValidity();
+  }
 }
 
 function configureRoleView() {
@@ -539,6 +726,22 @@ if (accessibilityToggle) {
     const nextValue = !document.body.classList.contains("large-ui");
     setLargeUi(nextValue);
     window.localStorage.setItem(largeUiStorageKey, String(nextValue));
+  });
+}
+
+if (globalSearchInput) {
+  globalSearchInput.addEventListener("input", (event) => {
+    if (globalSearchInput.validity.customError) {
+      globalSearchInput.setCustomValidity("");
+    }
+    applySearch(event.target.value);
+  });
+
+  globalSearchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      applySearch(event.target.value);
+    }
   });
 }
 
