@@ -8,4 +8,10 @@ Any previously implemented features that could not be supported by real data, in
 
 ## Local Preview
 
-To view the dashboard locally, run: `open src/dashboard/index.html`
+To view the dashboard through Flask, run:
+
+```bash
+python3 -m src.dashboard.server
+```
+
+Then open `http://127.0.0.1:5000`.
