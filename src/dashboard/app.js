@@ -90,7 +90,7 @@ if (accessibilityToggle) {
 if (confirmActionButton && confirmationCard) {
   confirmActionButton.addEventListener("click", () => {
     confirmationCard.innerHTML =
-      "<p><strong>Action recorded:</strong> Remote network diagnostic started for ATM-12.</p><p>The alert is now marked as investigating. Review results in 2 minutes or escalate if packet loss remains high.</p>";
+      "<p><strong>Action recorded:</strong> Source-backed review started for ATM-GB-0003.</p><p>Compare ATMH cassette depletion, KAFK host-unavailable windows, and the ATMA reconnect event before escalating runtime follow-up.</p>";
     confirmationCard.focus();
   });
 }
