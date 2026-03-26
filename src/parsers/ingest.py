@@ -7,6 +7,8 @@ from datetime import datetime
 # File paths - change these to point to where your source files are
 # ──────────────────────────────────────────────────────────────────────────────
 
+BASE_PATH = "data/synthetic"
+
 FILE_ATM_APP_LOG        = f"{BASE_PATH}/atm_application_log.json"
 FILE_ATM_HW_LOG         = f"{BASE_PATH}/atm_hardware_sensor_log.json"
 FILE_TERMINAL_LOG       = f"{BASE_PATH}/terminal_handler_app_log.json"
@@ -56,7 +58,7 @@ def isValidTimestamp(value, rowNumber, filename):
         clean = str(value).replace("Z", "").replace(".000", "")
         datetime.strptime(clean[:19], "%Y-%m-%dT%H:%M:%S")
         return True
-    except:
+    except ValueError:
         print("  WARNING: row " + str(rowNumber) + " in " + filename + " has a bad timestamp: " + str(value))
         return False
 
