@@ -9,6 +9,8 @@ from src.analysis.detect import Detection
 from src.analysis.correlate import Correlator
 from src.ml.scorer import AnomalyScorer
 
+import time
+
 def run_pipeline():
     # Stage 1: Ingest raw log files into a structured format
     run_ingestion()
@@ -16,6 +18,7 @@ def run_pipeline():
     # Stage 2: Clean the ingested data and store it in a SQLite database
     RAW_DATA_DIR = "data/raw"
     CLEANED_DB_PATH = "data/clean/atm_logs.db"
+    ERROR_PATH = "data/clean"
 
     db_handler = DatabaseHandler(db_path=CLEANED_DB_PATH)
     db_handler.setup_database(LOG_SCHEMAS)
