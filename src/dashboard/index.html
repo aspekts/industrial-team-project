@@ -52,19 +52,19 @@
           <dl class="scale-list">
             <div class="scale-item">
               <dt>Sources</dt>
-              <dd>7</dd>
+              <dd>Unavailable</dd>
             </div>
             <div class="scale-item">
               <dt>ATMs</dt>
-              <dd>6</dd>
+              <dd>Unavailable</dd>
             </div>
             <div class="scale-item">
               <dt>Window</dt>
-              <dd>24h</dd>
+              <dd>Loading...</dd>
             </div>
             <div class="scale-item">
               <dt>Avg TPS</dt>
-              <dd>1.2</dd>
+              <dd>Loading...</dd>
             </div>
           </dl>
         </section>
@@ -96,7 +96,7 @@
             <h2 id="dashboard-title">Source-backed operations view</h2>
             <p>Every summary on this page maps to records in ATMA, ATMH, KAFK, PROM, GCP, TERM, or WINOS.</p>
           </div>
-          <span class="status-pill status-critical">7 sources · 6 ATMs</span>
+          <span class="status-pill status-critical">Loading...</span>
         </div>
 
         <section class="critical-banner critical-banner-compact" aria-labelledby="critical-banner-title">
@@ -110,32 +110,32 @@
         </section>
 
         <div class="metric-grid">
-          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open ATM list. Six ATM IDs appear consistently across ATM application, hardware, and Kafka records.">
+          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open ATM list. Live ATM coverage is not loaded yet.">
             <h3>Observed ATMs</h3>
-            <p class="metric-value">6</p>
-            <p class="metric-note">Present across ATMA, ATMH, and KAFK</p>
-            <p class="metric-subnote">Small synthetic sample, not an estate-scale deployment</p>
+            <p class="metric-value">Loading...</p>
+            <p class="metric-note">Waiting for backend response.</p>
+            <p class="metric-subnote">Real ATM coverage will render here once the API is connected.</p>
             <p class="metric-link-hint">View ATM anomaly list</p>
           </article>
-          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open ATM application errors. Four ATM app error records are present, including timeouts and host disconnects.">
+          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open ATM application errors. Live error totals are not loaded yet.">
             <h3>ATM app errors</h3>
-            <p class="metric-value">4</p>
-            <p class="metric-note">3 timeouts and 1 host disconnect in ATMA</p>
-            <p class="metric-subnote">Error codes ERR-0012, ERR-0031, ERR-0040, and ERR-0041</p>
+            <p class="metric-value">Loading...</p>
+            <p class="metric-note">Waiting for backend response.</p>
+            <p class="metric-subnote">Show source-backed ATMA counts and error codes here.</p>
             <p class="metric-link-hint">Review application anomalies</p>
           </article>
-          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open ATM hardware alerts. Six warning or critical hardware events appear in ATMH.">
+          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open ATM hardware alerts. Live ATMH totals are not loaded yet.">
             <h3>Hardware alerts</h3>
-            <p class="metric-value">6</p>
-            <p class="metric-note">3 warnings and 3 critical ATMH events</p>
-            <p class="metric-subnote">Cassette depletion is the dominant hardware fault</p>
+            <p class="metric-value">Loading...</p>
+            <p class="metric-note">Waiting for backend response.</p>
+            <p class="metric-subnote">Show source-backed ATMH warning and critical counts here.</p>
             <p class="metric-link-hint">Open hardware anomalies</p>
           </article>
-          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open Kafka summary. Average transaction throughput is 1.2 TPS and 51 windows show non-success outcomes.">
+          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open Kafka summary. Live throughput is not loaded yet.">
             <h3>Event throughput</h3>
-            <p class="metric-value">1.2 TPS</p>
-            <p class="metric-note">Average KAFK transaction rate</p>
-            <p class="metric-subnote">51 non-success windows recorded in the stream</p>
+            <p class="metric-value">Loading...</p>
+            <p class="metric-note">Waiting for backend response.</p>
+            <p class="metric-subnote">Show source-backed KAFK throughput and failure windows here.</p>
             <p class="metric-link-hint">Inspect data flow</p>
           </article>
         </div>
@@ -235,7 +235,7 @@
             <div class="mini-graph" role="img" aria-label="Line graph placeholder showing host pressure rising before the final anomaly point.">
               <div class="mini-graph-header">
                 <span>WINOS host pressure</span>
-                <strong>98.73% peak memory</strong>
+                <strong>Loading...</strong>
               </div>
               <svg viewBox="0 0 320 120" class="svg-graph" aria-hidden="true">
                 <path d="M12 92 C48 88, 66 82, 98 70 S160 40, 192 44 S246 52, 308 102" />
@@ -253,23 +253,23 @@
               <li>
                 <div>
                   <strong>KAFK transaction failures</strong>
-                  <p>51 non-success windows recorded, including HOST_UNAVAILABLE and NETWORK_TIMEOUT</p>
+                  <p>Unavailable until a live summary endpoint is connected.</p>
                 </div>
-                <span class="status-pill status-critical">Min success 0%</span>
+                <span class="status-pill status-critical">Unavailable</span>
               </li>
               <li>
                 <div>
                   <strong>Terminal handler runtime</strong>
-                  <p>2 OutOfMemoryError exceptions in TERM and 1 restart observed in GCP metrics</p>
+                  <p>Unavailable until a live summary endpoint is connected.</p>
                 </div>
-                <span class="status-pill status-warning">CPU peak 87.76%</span>
+                <span class="status-pill status-warning">Unavailable</span>
               </li>
               <li>
                 <div>
                   <strong>Windows host health</strong>
-                  <p>WINOS reaches 98.73% memory and shows 72 rows with non-zero network errors</p>
+                  <p>Unavailable until a live summary endpoint is connected.</p>
                 </div>
-                <span class="status-pill status-critical">A6 pressure</span>
+                <span class="status-pill status-critical">Unavailable</span>
               </li>
             </ul>
           </section>
@@ -293,32 +293,32 @@
                 <tr>
                   <th scope="row">ATMA</th>
                   <td>Application errors</td>
-                  <td>4 error records</td>
-                  <td>ERR-0012, ERR-0031, ERR-0040, ERR-0041</td>
+                  <td>Loading...</td>
+                  <td>Unavailable until backend data is connected.</td>
                 </tr>
                 <tr>
                   <th scope="row">ATMH</th>
                   <td>Hardware state</td>
-                  <td>6 warning or critical events</td>
-                  <td>Cassette note count fell to zero on ATM-GB-0003</td>
+                  <td>Loading...</td>
+                  <td>Unavailable until backend data is connected.</td>
                 </tr>
                 <tr>
                   <th scope="row">KAFK</th>
                   <td>Transaction flow</td>
-                  <td>1.2 TPS average</td>
-                  <td>51 windows with non-success outcomes</td>
+                  <td>Loading...</td>
+                  <td>Unavailable until backend data is connected.</td>
                 </tr>
                 <tr>
                   <th scope="row">PROM + GCP</th>
                   <td>Runtime pressure</td>
-                  <td>983.7 MB JVM heap, 87.76% CPU peak</td>
-                  <td>One restart observed in container metrics</td>
+                  <td>Loading...</td>
+                  <td>Unavailable until backend data is connected.</td>
                 </tr>
                 <tr>
                   <th scope="row">WINOS</th>
                   <td>Host health</td>
-                  <td>98.73% peak memory</td>
-                  <td>72 rows with non-zero network errors</td>
+                  <td>Loading...</td>
+                  <td>Unavailable until backend data is connected.</td>
                 </tr>
               </tbody>
             </table>
