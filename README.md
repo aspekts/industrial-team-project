@@ -1,0 +1,1 @@
+To view the dashboard locally, run: `open src/dashboard/index.html`
