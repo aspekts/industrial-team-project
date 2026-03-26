@@ -12,7 +12,7 @@ import sys
 # e.g. if ingest.py is at src/parsers/ingest.py, use:
 #   sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'parsers'))
 # ──────────────────────────────────────────────────────────────────────────────
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'src', 'parsers'))
 
 from src.parsers import ingest
 
