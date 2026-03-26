@@ -13,10 +13,6 @@ class AnalyseData:
     def _get_float(self, section, option):
         return self.config.getfloat(section, option)
 
-    def _get_list(self, section, option, cast=float):
-        value = self.config.get(section, option)
-        return [cast(item.strip()) for item in value.split(',') if item.strip()]
-    
     def check_network_errors(self):
         """Detect network error signatures across ATMA/KAFK/TERM data"""
 
@@ -65,7 +61,7 @@ class AnalyseData:
             errors.extend(dict(row) for row in cursor.fetchall())
 
         return errors
-    
+
     def check_cash_cassette_depletion(self):
         """Detect cassette depletion signals across ATMH/KAFK data"""
 
@@ -155,7 +151,7 @@ class AnalyseData:
             findings.extend(dict(row) for row in cursor.fetchall())
 
         return findings
- 
+
     def check_container_restarts(self):
         """Detect container restart loop signals across GCP/TERM data"""
 
@@ -199,31 +195,27 @@ class AnalyseData:
             cursor = conn.cursor()
 
             # Kafka signals:
-            # - response_time_ms spikes to 3200ms then 30000ms (configurable via config.ini)
-            # - transaction_success_rate drops from 100% to 72% to 50% (configurable via config.ini)
-            # - failure_count increases to 8 then 14 (configurable via config.ini)
-            resp_times = self._get_list('PERFORMANCE', 'response_time_thresholds', int)
-            success_rates = self._get_list('TRANSACTION', 'success_rate_thresholds', float)
-            failure_counts = self._get_list('TRANSACTION', 'failure_count_thresholds', int)
-
-            resp_placeholders = ','.join('?' for _ in resp_times) if resp_times else 'NULL'
-            success_placeholders = ','.join('?' for _ in success_rates) if success_rates else 'NULL'
-            failure_placeholders = ','.join('?' for _ in failure_counts) if failure_counts else 'NULL'
+            # - response_time_ms spikes above min threshold (configurable via config.ini)
+            # - transaction_success_rate drops below max threshold (configurable via config.ini)
+            # - failure_count rises above min threshold (configurable via config.ini)
+            response_time_min = self._get_int('PERFORMANCE', 'response_time_min_ms')
+            success_rate_max = self._get_float('TRANSACTION', 'success_rate_max')
+            failure_count_min = self._get_int('TRANSACTION', 'failure_count_min')
 
             cursor.execute(
-                f"""
+                """
                 SELECT 'KAFK' AS source, *
                 FROM KAFK
-                WHERE response_time_ms IN ({resp_placeholders})
-                   OR transaction_success_rate IN ({success_placeholders})
-                   OR failure_count IN ({failure_placeholders})
+                WHERE response_time_ms >= ?
+                   OR transaction_success_rate <= ?
+                   OR failure_count >= ?
                 """,
-                (*resp_times, *success_rates, *failure_counts),
+                (response_time_min, success_rate_max, failure_count_min),
             )
             findings.extend(dict(row) for row in cursor.fetchall())
 
         return findings
-    
+
     def check_windows_os_metrics(self):
         """Detect Windows OS metric escalation signals in WINOS data"""
 
@@ -253,24 +245,36 @@ class AnalyseData:
             findings.extend(dict(row) for row in cursor.fetchall())
 
         return findings
-    
+
     def check_kafka_events(self):
-        """Detect Kafka event anomalies in KAFK data"""
+        """Detect Kafka event anomalies: out-of-order timestamps and missing required fields"""
 
         findings = []
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # Kafka event anomalies signals:
-            # - offset 4050 has an earlier timestamp than expected (out-of-order)
-            # - offset 4051 has null atm_status and transaction_rate_tps (missing fields)
+            # Out-of-order: rows where timestamp is earlier than the maximum timestamp
+            # of any row with a smaller kafka_offset (generic, not tied to specific offsets)
+            cursor.execute(
+                """
+                SELECT 'KAFK' AS source, *
+                FROM KAFK k1
+                WHERE k1.timestamp < (
+                    SELECT MAX(k2.timestamp)
+                    FROM KAFK k2
+                    WHERE k2.kafka_offset < k1.kafka_offset
+                )
+                """
+            )
+            findings.extend(dict(row) for row in cursor.fetchall())
+
+            # Malformed: rows with null values in required fields
             cursor.execute(
                 """
                 SELECT 'KAFK' AS source, *
                 FROM KAFK
-                WHERE (kafka_offset = 4050 AND timestamp < (SELECT MIN(timestamp) FROM KAFK WHERE kafka_offset > 4050))
-                   OR (kafka_offset = 4051 AND (atm_status IS NULL OR transaction_rate_tps IS NULL))
+                WHERE atm_status IS NULL OR transaction_rate_tps IS NULL
                 """
             )
             findings.extend(dict(row) for row in cursor.fetchall())
