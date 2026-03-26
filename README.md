@@ -90,6 +90,12 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### Running pipeline
+
+```bash
+python main.py
+```
+
 ### Running tests
 
 ```bash
