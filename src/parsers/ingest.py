@@ -23,6 +23,7 @@ FILE_GCP_METRICS        = f"{BASE_PATH}/gcp_cloud_metrics.csv"
 # ──────────────────────────────────────────────────────────────────────────────
 
 OutputFolder = "data/raw"
+error_path   = "data/clean/broken_logs.json"
 
 try:
     os.mkdir(OutputFolder)
@@ -519,6 +520,7 @@ def loadGCPMetrics():
         print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/gcp_cloud_metrics.txt")
 
+    print("  Saved to: " + OutputFolder + "/gcp_cloud_metrics.txt")
 
 
 def checkRowCounts():

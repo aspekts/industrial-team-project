@@ -5,7 +5,7 @@ from src.cleaning.schemas import LOG_SCHEMAS
 from src.cleaning.schemas import LogFilter
 
 class LogCleaner:
-    def __init__(self, db_handler, input_dir):
+    def __init__(self, db_handler, input_dir, error_dir):
         self.input_dir = input_dir
         self.db_handler = db_handler
         self.filter = LogFilter()
@@ -68,7 +68,7 @@ class LogCleaner:
 
             type_list = exp_type if isinstance(exp_type, tuple) else (exp_type,)
 
-            null_fields = ["None", "Null", ""]
+            null_fields = ["None", "Null", "", "NONE", "NULL"]
 
             if target is None or str(target).strip() in null_fields:
                 clean_log[field] = None
@@ -90,7 +90,7 @@ class LogCleaner:
     def process_all_files(self):
         buffer = []
         batch_size = 100
-
+        broken_logs = []
 
         for filename in os.listdir(self.input_dir):
             if not filename.endswith(".txt"):
@@ -105,6 +105,7 @@ class LogCleaner:
                 for line in reader:
                     schema = self.find_schema(line)
                     if not schema:
+                        broken_logs.append(line)
                         continue
 
                     try:
@@ -122,5 +123,12 @@ class LogCleaner:
 
         if buffer:
             self.db_handler.load_to_sql(buffer)
+
+        if broken_logs:
+            error_path = self.error_dir + "/broken_logs.json"
+            with open(error_path, "w", encoding='utf-8') as err:
+                json.dump(broken_logs, err, indent=4)
+                print(f"Saved broken log to {error_path}")
+
             
         print("[INFO] Data loaded to SQL.")
