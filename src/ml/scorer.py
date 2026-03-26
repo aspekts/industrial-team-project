@@ -33,7 +33,6 @@ class AnomalyScorer:
     """
     def score_and_store_anomalies(self):
         model_version = date.today().isoformat()
-        conn = sqlite3.connect(self.db_path)
 
         for source in SOURCES:
             # Load and train a fresh detector per source (feature shapes differ)
@@ -54,6 +53,9 @@ class AnomalyScorer:
                 'model_version': model_version,
             })
 
-            results_df.to_sql('ml_anomaly_scores', conn, if_exists='append', index=False)
+            with sqlite3.connect(self.db_path) as conn:
+                results_df.to_sql('ml_anomaly_scores', conn, if_exists='append', index=False)
 
-        conn.close()
+            print(f"[INFO] {source}: scored {len(results_df)} rows, {int(is_anomaly.sum())} anomalies.")
+
+        print("[INFO] Storing and scoring anomalies complete.")
