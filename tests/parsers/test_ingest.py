@@ -636,37 +636,37 @@ class TestMalformedInputInLoaders(BaseTestCase):
         self.assertEqual(len(rows), 1)
 
     def test_atm_app_log_skips_record_where_all_fields_are_null(self):
-    # a record where every field is null / empty
-    allNullRecord = [
-        {
-            "timestamp":        None,
-            "log_level":        None,
-            "atm_id":           None,
-            "location_code":    None,
-            "session_id":       None,
-            "correlation_id":   None,
-            "transaction_id":   None,
-            "event_type":       None,
-            "message":          None,
-            "component":        None,
-            "thread_id":        None,
-            "response_time_ms": None,
-            "error_code":       None,
-            "error_detail":     None,
-            "atm_status":       None,
-            "os_version":       None,
-            "app_version":      None,
-            "_anomaly":         None
-        }
-    ]
-    path = self.writeJSON("atm_application_log.json", allNullRecord)
-    ingest.FILE_ATM_APP_LOG = path
-
-    ingest.loadATMAppLog()
-
-    rows = self.readOutput("atm_application_logs.txt")
-    # only the header row — the null record should be skipped entirely
-    self.assertEqual(len(rows), 1)
+        # a record where every field is null / empty
+        allNullRecord = [
+            {
+                "timestamp":        None,
+                "log_level":        None,
+                "atm_id":           None,
+                "location_code":    None,
+                "session_id":       None,
+                "correlation_id":   None,
+                "transaction_id":   None,
+                "event_type":       None,
+                "message":          None,
+                "component":        None,
+                "thread_id":        None,
+                "response_time_ms": None,
+                "error_code":       None,
+                "error_detail":     None,
+                "atm_status":       None,
+                "os_version":       None,
+                "app_version":      None,
+                "_anomaly":         None
+            }
+        ]
+        path = self.writeJSON("atm_application_log.json", allNullRecord)
+        ingest.FILE_ATM_APP_LOG = path
+    
+        ingest.loadATMAppLog()
+    
+        rows = self.readOutput("atm_application_logs.txt")
+        # only the header row — the null record should be skipped entirely
+        self.assertEqual(len(rows), 1)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
