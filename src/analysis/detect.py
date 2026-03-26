@@ -1,8 +1,86 @@
+from __future__ import annotations
+
+import sqlite3
+from collections import defaultdict
+
 from src.analysis.analyse_data import AnalyseData
 
+
 class Detection:
-    def __init__(self):
-        self.analyse_data = AnalyseData()
+    def __init__(self, db_path: str = "data/clean/atm_logs.db"):
+        self.db_path = db_path
+        self.analyse_data = AnalyseData(db_path=db_path)
+
+    def store_detections(self) -> None:
+        def _summarise(detections, anomaly_type, anomaly_name, severity, desc_fn):
+            groups = defaultdict(lambda: {"count": 0, "timestamp": None, "desc": ""})
+            for d in detections:
+                key = (d.get("source", "UNKNOWN"), d.get("atm_id") or "N/A")
+                groups[key]["count"] += 1
+                if groups[key]["timestamp"] is None:
+                    groups[key]["timestamp"] = d.get("timestamp")
+                groups[key]["desc"] = desc_fn(d)
+            return [
+                (anomaly_type, anomaly_name, severity, src, atm_id,
+                 info["timestamp"], info["desc"], info["count"])
+                for (src, atm_id), info in groups.items()
+            ]
+
+        rows = []
+        rows += _summarise(
+            self.analyse_data.check_network_errors(), "A1", "Network timeout cascade", "CRITICAL",
+            lambda d: f"Host unavailable: {d.get('transaction_failure_reason')}" if d.get("source") == "KAFK"
+            else f"Disconnect/timeout: {d.get('error_code')} — {(d.get('error_detail') or '')[:80]}" if d.get("source") == "ATMA"
+            else f"Network timeout: {(d.get('message') or '')[:80]}",
+        )
+        rows += _summarise(
+            self.analyse_data.check_cash_cassette_depletion(), "A2", "Cash cassette depletion", "CRITICAL",
+            lambda d: f"Cassette {d.get('event_type')} ({d.get('severity')})" if d.get("source") == "ATMH"
+            else f"Transaction failure: {d.get('transaction_failure_reason')}",
+        )
+        rows += _summarise(
+            self.analyse_data.check_container_restarts(), "A4", "Container restart loop", "WARNING",
+            lambda d: f"Container restarted {d.get('restart_count')}x" if d.get("source") == "GCP"
+            else f"Service {d.get('event_type') or 'OOM'}: {(d.get('exception_class') or d.get('message') or '')[:80]}",
+        )
+        rows += _summarise(
+            self.analyse_data.check_performance_degradation(), "A5", "Performance degradation", "WARNING",
+            lambda d: f"Resp {d.get('response_time_ms')}ms, success {d.get('transaction_success_rate')}%, failures {d.get('failure_count')}",
+        )
+        rows += _summarise(
+            self.analyse_data.check_windows_os_metrics(), "A6", "OS memory pressure", "WARNING",
+            lambda d: f"Mem {d.get('memory_usage_percent')}%, CPU {d.get('cpu_usage_percent')}%, net errors {d.get('network_errors')}",
+        )
+        rows += _summarise(
+            self.analyse_data.check_kafka_events(), "A7", "Out-of-order / malformed Kafka event", "WARNING",
+            lambda d: f"Offset {d.get('kafka_offset')} ordering or integrity issue",
+        )
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS analysis_detections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    anomaly_type TEXT NOT NULL,
+                    anomaly_name TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    atm_id TEXT,
+                    detection_timestamp TEXT,
+                    description TEXT,
+                    event_count INTEGER DEFAULT 1,
+                    detected_at TEXT DEFAULT (datetime('now'))
+                )
+            """)
+            conn.execute("DELETE FROM analysis_detections")
+            conn.executemany("""
+                INSERT INTO analysis_detections
+                    (anomaly_type, anomaly_name, severity, source, atm_id,
+                     detection_timestamp, description, event_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, rows)
+            conn.commit()
+
+        print(f"[INFO] Analysis complete: {len(rows)} detection groups written to analysis_detections.")
 
     def detect(self):
         """

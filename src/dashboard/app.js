@@ -765,3 +765,153 @@ applyRoleDashboardCopy();
 
 const initialTargetId = window.location.hash.replace("#", "") || activeRoleConfig.defaultScreen;
 showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : activeRoleConfig.defaultScreen);
+
+// ─── Data layer ───────────────────────────────────────────────────────────────
+
+async function fetchDashboardData() {
+  try {
+    const [summary, scale, snapshot, atmList, alerts] = await Promise.all([
+      fetch("/api/summary").then((r) => r.json()),
+      fetch("/api/scale").then((r) => r.json()),
+      fetch("/api/source-snapshot").then((r) => r.json()),
+      fetch("/api/atm-list").then((r) => r.json()),
+      fetch("/api/alerts").then((r) => r.json()),
+    ]);
+
+    if (summary.status === "ok") populateSummary(summary);
+    if (scale.status === "ok") populateScale(scale);
+    if (snapshot.status === "ok") populateSourceSnapshot(snapshot.sources);
+    if (atmList.status === "ok") populateAtmList(atmList.atms);
+    if (alerts.status === "ok") populateAlerts(alerts);
+  } catch (err) {
+    console.warn("[dashboard] data fetch failed:", err);
+  }
+}
+
+function populateSummary(data) {
+  setMetricCardState("observedAtms", uiStateModes.READY, {
+    value: String(data.observed_atms),
+    note: `${data.app_errors} app error events across ATMA`,
+  });
+  setMetricCardState("atmAppErrors", uiStateModes.READY, {
+    value: String(data.app_errors),
+    note: `${data.failure_windows} critical detection groups`,
+  });
+  setMetricCardState("hardwareAlerts", uiStateModes.READY, {
+    value: String(data.hardware_alerts),
+    note: "ATMH WARNING + CRITICAL events",
+  });
+  setMetricCardState("eventThroughput", uiStateModes.READY, {
+    value: String(data.avg_tps),
+    note: "Average transactions per KAFK window",
+  });
+
+  const pill = document.getElementById("dashboard-status-pill");
+  if (pill) {
+    const hasCritical = data.failure_windows > 0;
+    pill.textContent = hasCritical ? "Critical" : "Operational";
+    pill.className = `status-pill ${hasCritical ? "status-critical" : "status-ok"}`;
+  }
+}
+
+function populateScale(data) {
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  setText("scale-sources", String(data.sources));
+  setText("scale-atms", String(data.atms));
+  setText("scale-window", data.time_window);
+  setText("scale-avg-tps", String(data.avg_tps));
+}
+
+function populateSourceSnapshot(sources) {
+  const tbody = document.getElementById("source-snapshot-tbody");
+  if (!tbody) return;
+  tbody.innerHTML = sources
+    .map(
+      (s) => `
+    <tr>
+      <th scope="row">${s.source}</th>
+      <td>${s.status}</td>
+      <td>${s.signal === "present" ? "Live" : s.signal === "empty" ? "Empty" : "Absent"}</td>
+      <td>${s.signal === "present" ? "Source data available." : "No records ingested yet."}</td>
+    </tr>`
+    )
+    .join("");
+}
+
+function populateAtmList(atms) {
+  const tbody = document.getElementById("atm-list-tbody");
+  if (!tbody) return;
+  if (!atms.length) {
+    tbody.innerHTML = '<tr><td colspan="6">No ATM data available.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = atms
+    .map((a) => {
+      const pillClass =
+        a.status === "critical"
+          ? "status-critical"
+          : a.status === "warning"
+          ? "status-warning"
+          : "status-ok";
+      const pillLabel =
+        a.status === "critical" ? "Critical" : a.status === "warning" ? "Warning" : "OK";
+      const issue = a.issue || "No active anomaly";
+      const lastUpdate = a.last_update ? a.last_update.slice(0, 16) : "Unknown";
+      return `
+    <tr>
+      <th scope="row">${a.atm_id}</th>
+      <td>${a.location}</td>
+      <td><span class="status-pill ${pillClass}">${pillLabel}</span></td>
+      <td>${issue}</td>
+      <td>${lastUpdate}</td>
+      <td><button class="text-button" type="button" data-screen-target="atm-detail">Open</button></td>
+    </tr>`;
+    })
+    .join("");
+}
+
+function populateAlerts(data) {
+  const critSummary = document.getElementById("alerts-critical-summary");
+  const critList = document.getElementById("alerts-critical-list");
+  const warnSummary = document.getElementById("alerts-warning-summary");
+  const warnList = document.getElementById("alerts-warning-list");
+
+  if (critSummary) {
+    critSummary.textContent = `${data.critical.length} critical anomaly group${data.critical.length !== 1 ? "s" : ""}`;
+  }
+  if (critList) {
+    critList.innerHTML = data.critical.length
+      ? data.critical
+          .map(
+            (a) =>
+              `<li><strong>${a.anomaly_name} (${a.anomaly_type})</strong> — ${a.source}${a.atm_id && a.atm_id !== "N/A" ? " / " + a.atm_id : ""}: ${a.description || ""} <em>(${a.event_count} event${a.event_count !== 1 ? "s" : ""})</em></li>`
+          )
+          .join("")
+      : "<li>No critical anomalies detected.</li>";
+  }
+
+  if (warnSummary) {
+    warnSummary.textContent = `${data.warning.length} warning anomaly group${data.warning.length !== 1 ? "s" : ""}`;
+  }
+  if (warnList) {
+    warnList.innerHTML = data.warning.length
+      ? data.warning
+          .map(
+            (a) =>
+              `<li><strong>${a.anomaly_name} (${a.anomaly_type})</strong> — ${a.source}${a.atm_id && a.atm_id !== "N/A" ? " / " + a.atm_id : ""}: ${a.description || ""} <em>(${a.event_count} event${a.event_count !== 1 ? "s" : ""})</em></li>`
+          )
+          .join("")
+      : "<li>No warning anomalies detected.</li>";
+  }
+
+  const hostEl = document.getElementById("host-pressure-value");
+  if (hostEl) {
+    const winosWarning = data.warning.find((a) => a.source === "WINOS");
+    hostEl.textContent = winosWarning ? "Elevated" : "Normal";
+  }
+}
+
+fetchDashboardData();

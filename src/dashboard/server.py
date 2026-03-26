@@ -239,6 +239,241 @@ def create_app(db_path: Path | None = None) -> Flask:
 
         return jsonify(response)
 
+    def _db():
+        return Path(app.config["DB_PATH"])
+
+    def _connect():
+        return sqlite3.connect(_db())
+
+    def _table_exists(conn, name):
+        cur = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+        )
+        return cur.fetchone() is not None
+
+    @app.get("/api/summary")
+    def api_summary():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "reason": "database not found"})
+
+        with _connect() as conn:
+            has_atma = _table_exists(conn, "ATMA")
+            has_atmh = _table_exists(conn, "ATMH")
+            has_kafk = _table_exists(conn, "KAFK")
+            has_detections = _table_exists(conn, "analysis_detections")
+
+            observed_atms = 0
+            if has_atma:
+                row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
+                observed_atms = row[0] if row else 0
+
+            app_errors = 0
+            if has_atma:
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM ATMA WHERE event_type IN ('ERROR','TIMEOUT','NETWORK_DISCONNECT')"
+                ).fetchone()
+                app_errors = row[0] if row else 0
+
+            hardware_alerts = 0
+            if has_atmh:
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM ATMH WHERE severity IN ('CRITICAL','WARNING')"
+                ).fetchone()
+                hardware_alerts = row[0] if row else 0
+
+            avg_tps = 0.0
+            if has_kafk:
+                row = conn.execute(
+                    "SELECT AVG(CAST(transaction_count AS REAL)) FROM KAFK"
+                ).fetchone()
+                avg_tps = round(row[0] or 0, 1)
+
+            failure_windows = 0
+            if has_detections:
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM analysis_detections WHERE severity = 'CRITICAL'"
+                ).fetchone()
+                failure_windows = row[0] if row else 0
+
+        return jsonify(
+            {
+                "status": "ok",
+                "observed_atms": observed_atms,
+                "app_errors": app_errors,
+                "hardware_alerts": hardware_alerts,
+                "avg_tps": avg_tps,
+                "failure_windows": failure_windows,
+            }
+        )
+
+    @app.get("/api/scale")
+    def api_scale():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable"})
+
+        source_names = ("ATMA", "ATMH", "GCP", "KAFK", "PROM", "TERM", "WINOS")
+        with _connect() as conn:
+            present = [n for n in source_names if _table_exists(conn, n)]
+            sources = len(present)
+
+            atms = 0
+            if "ATMA" in present:
+                row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
+                atms = row[0] if row else 0
+
+            time_window = "N/A"
+            if "KAFK" in present:
+                row = conn.execute(
+                    "SELECT MIN(timestamp), MAX(timestamp) FROM KAFK"
+                ).fetchone()
+                if row and row[0] and row[1]:
+                    time_window = f"{row[0][:10]} \u2013 {row[1][:10]}"
+
+            avg_tps = 0.0
+            if "KAFK" in present:
+                row = conn.execute(
+                    "SELECT AVG(CAST(transaction_count AS REAL)) FROM KAFK"
+                ).fetchone()
+                avg_tps = round(row[0] or 0, 1)
+
+        return jsonify(
+            {
+                "status": "ok",
+                "sources": sources,
+                "atms": atms,
+                "time_window": time_window,
+                "avg_tps": avg_tps,
+            }
+        )
+
+    @app.get("/api/source-snapshot")
+    def api_source_snapshot():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "sources": []})
+
+        source_names = ("ATMA", "ATMH", "GCP", "KAFK", "PROM", "TERM", "WINOS")
+        results = []
+        with _connect() as conn:
+            for name in source_names:
+                if not _table_exists(conn, name):
+                    results.append({"source": name, "signal": "absent", "status": "No data"})
+                    continue
+
+                row = conn.execute(f"SELECT COUNT(*) FROM [{name}]").fetchone()
+                count = row[0] if row else 0
+
+                if count == 0:
+                    signal, status = "empty", "0 records"
+                else:
+                    signal, status = "present", f"{count:,} records"
+
+                results.append({"source": name, "signal": signal, "status": status})
+
+        return jsonify({"status": "ok", "sources": results})
+
+    @app.get("/api/atm-list")
+    def api_atm_list():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "atms": []})
+
+        with _connect() as conn:
+            has_atma = _table_exists(conn, "ATMA")
+            has_detections = _table_exists(conn, "analysis_detections")
+
+            if not has_atma:
+                return jsonify({"status": "ok", "atms": []})
+
+            rows = conn.execute(
+                """
+                SELECT atm_id, location_code, MAX(timestamp) AS last_update
+                FROM ATMA
+                GROUP BY atm_id, location_code
+                """
+            ).fetchall()
+
+            atm_issues = {}
+            if has_detections:
+                det_rows = conn.execute(
+                    """
+                    SELECT atm_id, severity, anomaly_name
+                    FROM analysis_detections
+                    ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
+                    """
+                ).fetchall()
+                for atm_id, severity, name in det_rows:
+                    if atm_id and atm_id not in atm_issues:
+                        atm_issues[atm_id] = (severity, name)
+
+            atms = []
+            for atm_id, location_code, last_update in rows:
+                if atm_id in atm_issues:
+                    severity, issue = atm_issues[atm_id]
+                    status = "critical" if severity == "CRITICAL" else "warning"
+                else:
+                    issue = None
+                    status = "ok"
+
+                atms.append(
+                    {
+                        "atm_id": atm_id,
+                        "location": location_code or "N/A",
+                        "status": status,
+                        "issue": issue,
+                        "last_update": last_update,
+                    }
+                )
+
+            atms.sort(
+                key=lambda a: (
+                    0 if a["status"] == "critical" else 1 if a["status"] == "warning" else 2
+                )
+            )
+
+        return jsonify({"status": "ok", "atms": atms})
+
+    @app.get("/api/alerts")
+    def api_alerts():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "critical": [], "warning": []})
+
+        with _connect() as conn:
+            if not _table_exists(conn, "analysis_detections"):
+                return jsonify({"status": "ok", "critical": [], "warning": []})
+
+            rows = conn.execute(
+                """
+                SELECT anomaly_type, anomaly_name, severity, source, atm_id,
+                       detection_timestamp, description, event_count
+                FROM analysis_detections
+                ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
+                """
+            ).fetchall()
+
+        critical = []
+        warning = []
+        for anomaly_type, anomaly_name, severity, source, atm_id, ts, desc, count in rows:
+            entry = {
+                "anomaly_type": anomaly_type,
+                "anomaly_name": anomaly_name,
+                "severity": severity,
+                "source": source,
+                "atm_id": atm_id,
+                "detection_timestamp": ts,
+                "description": desc,
+                "event_count": count,
+            }
+            if severity == "CRITICAL":
+                critical.append(entry)
+            else:
+                warning.append(entry)
+
+        return jsonify({"status": "ok", "critical": critical, "warning": warning})
+
     return app
 
 
