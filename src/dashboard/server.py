@@ -285,7 +285,7 @@ def create_app(db_path: Path | None = None) -> Flask:
             avg_tps = 0.0
             if has_kafk:
                 row = conn.execute(
-                    "SELECT AVG(CAST(transaction_count AS REAL)) FROM KAFK"
+                    "SELECT AVG(CAST(transaction_rate_tps AS REAL)) FROM KAFK"
                 ).fetchone()
                 avg_tps = round(row[0] or 0, 1)
 
@@ -334,7 +334,7 @@ def create_app(db_path: Path | None = None) -> Flask:
             avg_tps = 0.0
             if "KAFK" in present:
                 row = conn.execute(
-                    "SELECT AVG(CAST(transaction_count AS REAL)) FROM KAFK"
+                    "SELECT AVG(CAST(transaction_rate_tps AS REAL)) FROM KAFK"
                 ).fetchone()
                 avg_tps = round(row[0] or 0, 1)
 

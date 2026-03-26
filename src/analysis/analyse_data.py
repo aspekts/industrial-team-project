@@ -254,17 +254,15 @@ class AnalyseData:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # Out-of-order: rows where timestamp is earlier than the maximum timestamp
-            # of any row with a smaller kafka_offset (generic, not tied to specific offsets)
+            # Out-of-order: rows where timestamp is earlier than the previous offset's
+            # timestamp. Uses a self-join on adjacent offsets to avoid a correlated
+            # subquery that scans the full table per row.
             cursor.execute(
                 """
-                SELECT 'KAFK' AS source, *
+                SELECT 'KAFK' AS source, k1.*
                 FROM KAFK k1
-                WHERE k1.timestamp < (
-                    SELECT MAX(k2.timestamp)
-                    FROM KAFK k2
-                    WHERE k2.kafka_offset < k1.kafka_offset
-                )
+                JOIN KAFK k2 ON k2.kafka_offset = k1.kafka_offset - 1
+                WHERE k1.timestamp < k2.timestamp
                 """
             )
             findings.extend(dict(row) for row in cursor.fetchall())
