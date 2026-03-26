@@ -7,6 +7,8 @@ const accessibilityToggle = document.getElementById("accessibility-toggle");
 const dashboardMetricCards = document.querySelectorAll(".metric-grid .metric-card");
 const anomalyTrendChart = document.querySelector(".trend-chart");
 const hostPressureChart = document.querySelector(".mini-graph");
+const dashboardRole = window.__dashboardRole || document.body.dataset.dashboardRole || "ops";
+const dashboardRoleLabel = window.__dashboardRoleLabel || document.body.dataset.dashboardRoleLabel || "Ops";
 
 const largeUiStorageKey = "atm-monitor-large-ui";
 const uiStateModes = {
@@ -14,12 +16,27 @@ const uiStateModes = {
   READY: "ready",
   UNAVAILABLE: "unavailable",
 };
+const roleViewConfig = {
+  admin: {
+    defaultScreen: "dashboard",
+    allowedScreens: ["dashboard", "alerts", "settings"],
+  },
+  manager: {
+    defaultScreen: "dashboard",
+    allowedScreens: ["dashboard", "atm-list", "alerts"],
+  },
+  ops: {
+    defaultScreen: "alerts",
+    allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "action-center"],
+  },
+};
 
 const metricCardState = createMetricCardStateRegistry();
 const chartState = createChartStateRegistry();
+const activeRoleConfig = roleViewConfig[dashboardRole] || roleViewConfig.ops;
 
 let currentScreenId = "dashboard";
-const validScreenIds = new Set(Array.from(screens, (screen) => screen.id));
+const validScreenIds = new Set(activeRoleConfig.allowedScreens);
 
 function setLargeUi(isEnabled) {
   document.body.classList.toggle("large-ui", isEnabled);
@@ -244,6 +261,38 @@ function initializeDashboardUiState() {
   };
 }
 
+function configureRoleView() {
+  document.body.dataset.dashboardRole = dashboardRole;
+  document.body.dataset.dashboardRoleLabel = dashboardRoleLabel;
+
+  const sidebarEyebrow = document.querySelector(".sidebar-eyebrow");
+  if (sidebarEyebrow) {
+    sidebarEyebrow.textContent = `${dashboardRoleLabel} Console`;
+  }
+
+  screens.forEach((screen) => {
+    screen.hidden = !validScreenIds.has(screen.id);
+  });
+
+  document.querySelectorAll("[data-screen-target]").forEach((element) => {
+    const targetId = element.dataset.screenTarget;
+    const isAllowed = validScreenIds.has(targetId);
+    element.hidden = !isAllowed;
+
+    if (!isAllowed) {
+      element.setAttribute("aria-hidden", "true");
+      element.setAttribute("tabindex", "-1");
+    } else {
+      element.removeAttribute("aria-hidden");
+      if (element.classList.contains("metric-card")) {
+        element.setAttribute("tabindex", "0");
+      } else {
+        element.removeAttribute("tabindex");
+      }
+    }
+  });
+}
+
 function showScreen(targetId) {
   if (!validScreenIds.has(targetId)) {
     return;
@@ -316,12 +365,13 @@ if (confirmActionButton && confirmationCard) {
 }
 
 window.addEventListener("hashchange", () => {
-  const targetId = window.location.hash.replace("#", "") || "dashboard";
-  showScreen(validScreenIds.has(targetId) ? targetId : "dashboard");
+  const targetId = window.location.hash.replace("#", "") || activeRoleConfig.defaultScreen;
+  showScreen(validScreenIds.has(targetId) ? targetId : activeRoleConfig.defaultScreen);
 });
 
 setLargeUi(loadLargeUiPreference());
 initializeDashboardUiState();
+configureRoleView();
 
-const initialTargetId = window.location.hash.replace("#", "") || "dashboard";
-showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : "dashboard");
+const initialTargetId = window.location.hash.replace("#", "") || activeRoleConfig.defaultScreen;
+showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : activeRoleConfig.defaultScreen);

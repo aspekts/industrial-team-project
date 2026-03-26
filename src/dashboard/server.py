@@ -4,13 +4,18 @@ import os
 import sqlite3
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template_string, request, send_from_directory, session, url_for
+from flask import Flask, jsonify, redirect, render_template_string, request, session, url_for
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DASHBOARD_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "clean" / "atm_logs.db"
 VALID_ROLES = ("admin", "manager", "ops")
+ROLE_LABELS = {
+    "admin": "Admin",
+    "manager": "Manager",
+    "ops": "Ops",
+}
 LOGIN_TEMPLATE = """<!doctype html>
 <html lang="en">
   <head>
@@ -139,6 +144,21 @@ def get_dashboard_endpoint(role: str) -> str:
     }[role]
 
 
+def render_dashboard_view(role: str):
+    dashboard_html = (DASHBOARD_DIR / "index.html").read_text(encoding="utf-8")
+    dashboard_html = dashboard_html.replace(
+        "<body>",
+        f'<body data-dashboard-role="{role}" data-dashboard-role-label="{ROLE_LABELS[role]}">',
+        1,
+    )
+    dashboard_html = dashboard_html.replace(
+        '<script src="app.js"></script>',
+        f'<script>window.__dashboardRole = "{role}"; window.__dashboardRoleLabel = "{ROLE_LABELS[role]}";</script>\n    <script src="app.js"></script>',
+        1,
+    )
+    return render_template_string(dashboard_html)
+
+
 def create_app(db_path: Path | None = None) -> Flask:
     app = Flask(
         __name__,
@@ -181,7 +201,7 @@ def create_app(db_path: Path | None = None) -> Flask:
             return redirect(url_for("login"))
         if role != expected_role:
             return redirect(url_for(get_dashboard_endpoint(role)))
-        return send_from_directory(DASHBOARD_DIR, "index.html")
+        return render_dashboard_view(expected_role)
 
     @app.get("/dashboard/admin")
     def admin_dashboard():
