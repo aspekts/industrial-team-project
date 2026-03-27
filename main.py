@@ -1,4 +1,5 @@
 # main.py
+import os
 from src.parsers.ingest import run_ingestion
 from src.cleaning.schemas import LOG_SCHEMAS
 from src.cleaning.data_cleaning import LogCleaner
@@ -29,9 +30,14 @@ def run_pipeline():
     scorer.score_and_store_anomalies()
 
 if __name__ == "__main__":
+<<<<<<< Updated upstream
+    run_pipeline()
+=======
     run_pipeline()
     app = create_app()
-    print("[INFO] Pipeline complete. Starting dashboard at http://127.0.0.1:5000")
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    print(f"[INFO] Pipeline complete. Starting dashboard on http://0.0.0.0:{port}")
+    app.run(host="0.0.0.0", port=port, debug=False)
 
  
+>>>>>>> Stashed changes
