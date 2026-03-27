@@ -41,7 +41,7 @@ class LogCleaner:
     def validate_types(self, raw_line, schema_type):
         schema = LOG_SCHEMAS.get(schema_type)
 
-        print(f"Checking value types for the following log:\n{raw_line}")
+        # print(f"Checking value types for the following log:\n{raw_line}")
 
         for field, expected_type in schema.items():
             raw_value = raw_line.get(field)
@@ -121,4 +121,4 @@ class LogCleaner:
         if buffer:
             self.db_handler.load_to_sql(buffer)
             
-        print("Pipeline Complete. Data loaded to SQL.")
+        print("[INFO] Data loaded to SQL.")

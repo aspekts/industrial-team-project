@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="src/dashboard/styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -52,19 +52,19 @@
           <dl class="scale-list">
             <div class="scale-item">
               <dt>Sources</dt>
-              <dd>Unavailable</dd>
+              <dd id="scale-sources">Unavailable</dd>
             </div>
             <div class="scale-item">
               <dt>ATMs</dt>
-              <dd>Unavailable</dd>
+              <dd id="scale-atms">Unavailable</dd>
             </div>
             <div class="scale-item">
               <dt>Window</dt>
-              <dd>Loading...</dd>
+              <dd id="scale-window">Loading...</dd>
             </div>
             <div class="scale-item">
               <dt>Avg TPS</dt>
-              <dd>Loading...</dd>
+              <dd id="scale-avg-tps">Loading...</dd>
             </div>
           </dl>
         </section>
@@ -96,7 +96,7 @@
             <h2 id="dashboard-title">Source-backed operations view</h2>
             <p>Every summary on this page maps to records in ATMA, ATMH, KAFK, PROM, GCP, TERM, or WINOS.</p>
           </div>
-          <span class="status-pill status-critical">Loading...</span>
+          <span id="dashboard-status-pill" class="status-pill status-critical">Loading...</span>
         </div>
 
         <section class="critical-banner critical-banner-compact" aria-labelledby="critical-banner-title">
@@ -235,7 +235,7 @@
             <div class="mini-graph" role="img" aria-label="Line graph placeholder showing host pressure rising before the final anomaly point.">
               <div class="mini-graph-header">
                 <span>WINOS host pressure</span>
-                <strong>Loading...</strong>
+                <strong id="host-pressure-value">Loading...</strong>
               </div>
               <svg viewBox="0 0 320 120" class="svg-graph" aria-hidden="true">
                 <path d="M12 92 C48 88, 66 82, 98 70 S160 40, 192 44 S246 52, 308 102" />
@@ -289,7 +289,7 @@
                   <th scope="col">Notes</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="source-snapshot-tbody">
                 <tr>
                   <th scope="row">ATMA</th>
                   <td>Application errors</td>
@@ -489,7 +489,7 @@
                 <th scope="col">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="atm-list-tbody">
               <tr>
                 <th scope="row">Loading...</th>
                 <td>Unavailable</td>
@@ -540,8 +540,8 @@
           <section class="panel" aria-labelledby="group-critical-title">
             <h3 id="group-critical-title">Critical anomalies</h3>
             <details open>
-              <summary>Loading anomaly groups...</summary>
-              <ul class="simple-list compact-list">
+              <summary id="alerts-critical-summary">Loading anomaly groups...</summary>
+              <ul id="alerts-critical-list" class="simple-list compact-list">
                 <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
                 <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
                 <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
@@ -552,8 +552,8 @@
           <section class="panel" aria-labelledby="group-warning-title">
             <h3 id="group-warning-title">Warning anomalies</h3>
             <details open>
-              <summary>Loading anomaly groups...</summary>
-              <ul class="simple-list compact-list">
+              <summary id="alerts-warning-summary">Loading anomaly groups...</summary>
+              <ul id="alerts-warning-list" class="simple-list compact-list">
                 <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
                 <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
               </ul>
@@ -639,6 +639,6 @@
       </main>
     </div>
 
-    <script src="src/dashboard/app.js"></script>
+    <script src="/app.js"></script>
   </body>
 </html>
