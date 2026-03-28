@@ -28,7 +28,7 @@ error_path   = "data/clean/broken_logs.json"
 try:
     os.mkdir(OutputFolder)
     os.makedirs(os.path.dirname(error_path), exist_ok=True)
-except:
+except OSError:
     print("Output folder already exists, continuing...")
 
 
@@ -45,7 +45,7 @@ def isFileEmpty(filepath):
                 return True
             else:
                 return False
-    except:
+    except OSError:
         return True
 
 
