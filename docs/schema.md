@@ -2,218 +2,249 @@
 
 > **Status: FROZEN as of Sprint 1, Day 4.**
 > Changes after this point require a PR with approval from all team members.
+>
+> **Source of truth:** NCR Atleos data dictionaries in `Assets/Data Dictionary/`.
+> This document is a summary reference — always consult the data dictionaries for
+> the normative field definitions.
 
 ---
 
-## 1. Correlation ID Convention
+## 1. Cross-Source Correlation
 
-Every event across all 7 sources carries a `correlation_id` that allows the analysis layer to link related events across sources.
+Four fields link related events across sources for the same real-world transaction:
 
-**Format:** `<SOURCE_CODE>-<YYYYMMDD>-<UUID4>`
-
-| Source | Source Code |
-|---|---|
-| ATM Application Log | `ATMA` |
-| ATM Hardware Sensor Log | `ATMH` |
-| Terminal Handler App Log | `TERM` |
-| Kafka ATM Metrics Stream | `KAFK` |
-| Prometheus Metrics | `PROM` |
-| Windows OS Metrics Log | `WINOS` |
-| GCP Cloud Metrics | `GCP` |
-
-**Example:** `ATMA-20260317-f47ac10b-58cc-4372-a567-0e02b2c3d479`
-
-When a single real-world event is observed across multiple sources (e.g. a network timeout visible in both ATM App and Kafka), all related log lines share the same UUID4 portion so the correlation engine can join them.
-
----
-
-## 2. Universal Envelope Fields
-
-Every record — regardless of source or format — must include these fields after parsing. The cleaning pipeline will validate their presence.
-
-| Field | Type | Description | Example |
+| Field | Type | Shared by | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | Globally unique event ID (see §1) | `ATMA-20260317-f47ac10b-...` |
-| `source` | `string` | Source code from §1 | `ATMA` |
-| `timestamp` | `string (ISO 8601)` | UTC event time to millisecond precision | `2026-03-17T14:23:01.452Z` |
-| `host_id` | `string` | Identifier of the machine/container/ATM | `atm-lon-042` |
-| `anomaly_flag` | `boolean` | Set by analysis layer; `false` in raw data | `false` |
-| `anomaly_type` | `string \| null` | A1–A7 or `null` if no anomaly detected | `A1` |
+| `correlation_id` | UUID v4 | ATMA, ATMH, TERM, KAFK | Same UUID for all log lines belonging to one transaction. Null for non-transaction events |
+| `transaction_id` | UUID v4 | ATMA, TERM, KAFK | Unique per banking transaction |
+| `atm_id` | string | ATMA, ATMH, TERM, KAFK, WINOS | Format `ATM-[A-Z]{2}-[0-9]{4}`, e.g. `ATM-GB-0042` |
+| `timestamp` | ISO 8601 UTC | All 7 sources | Must be monotonically increasing per source. Millisecond precision |
+
+> **Note on `correlation_id`:** This is a plain UUID v4, not prefixed with a source
+> code. The same UUID appears across ATMA, ATMH, TERM, and KAFK for the same
+> transaction, enabling the correlation engine to join them.
+
+**The `_anomaly` field** appears in synthetic data files as an internal validation
+tag (`null` for clean records, `"A1"`-`"A7"` for injected anomalies). It is **not**
+part of the schema and will not be present in real production logs.
 
 ---
 
-## 3. Per-Source Schemas
+## 2. Per-Source Schemas
 
-### 3.1 ATM Application Log (`ATMA`) — JSON
+### 2.1 ATM Application Log (`ATMA`) — JSON
 
-Emitted by the ATM application software on each transaction or system event.
+C# ATM client application running on Windows. Event-driven.
 
-| Field | Type | Nullable | Description |
+| Field | Type | Nullable | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | No | See §1 |
-| `source` | `string` | No | `"ATMA"` |
-| `timestamp` | `string` | No | ISO 8601 UTC |
-| `host_id` | `string` | No | ATM machine ID |
-| `transaction_id` | `string` | No | Unique per transaction |
-| `event_type` | `string` | No | e.g. `WITHDRAWAL`, `BALANCE_QUERY`, `SESSION_START`, `ERROR` |
-| `response_time_ms` | `integer` | No | End-to-end response time in ms |
-| `status` | `string` | No | `SUCCESS`, `FAILURE`, `TIMEOUT` |
-| `error_code` | `string` | Yes | Null unless `status` is `FAILURE` or `TIMEOUT` |
-| `network_latency_ms` | `integer` | Yes | Populated for network-touching events |
-| `anomaly_flag` | `boolean` | No | `false` in synthetic output |
-| `anomaly_type` | `string` | Yes | `null` in synthetic output |
+| `timestamp` | ISO 8601 | No | UTC, millisecond precision |
+| `log_level` | enum | No | `TRACE` `DEBUG` `INFO` `WARN` `ERROR` `FATAL` |
+| `atm_id` | string | No | `ATM-[A-Z]{2}-[0-9]{4}` |
+| `location_code` | string | No | `LOC-[0-9]{4}` |
+| `session_id` | UUID v4 | Yes | Null if no active user session |
+| `correlation_id` | UUID v4 | Yes | Null for non-transaction events |
+| `transaction_id` | UUID v4 | Yes | Null for non-transaction events |
+| `event_type` | enum | No | `STARTUP` `SHUTDOWN` `CARD_INSERTED` `CARD_EJECTED` `PIN_ENTERED` `TRANSACTION_START` `TRANSACTION_END` `CASH_DISPENSED` `RECEIPT_PRINTED` `NETWORK_CONNECT` `NETWORK_DISCONNECT` `HARDWARE_FAULT` `SUPERVISOR_MODE_ENTER` `SUPERVISOR_MODE_EXIT` `JOURNAL_WRITE` `TIMEOUT` `MALFORMED_REQUEST` `UNKNOWN` |
+| `message` | string | No | Human-readable log message. Max 512 chars |
+| `component` | string | No | Software module, e.g. `CashDispenser`, `TransactionManager` |
+| `thread_id` | integer | Yes | OS thread ID |
+| `response_time_ms` | integer | Yes | Null for non-timed events |
+| `error_code` | string | Yes | Pattern `ERR-[0-9]{4}`. Null if no error |
+| `error_detail` | string | Yes | Stack trace / detail. Max 1024 chars. Null if no error |
+| `atm_status` | enum | No | `Online` `Offline` `In Service` `In Supervisor` `Out of Service` |
+| `os_version` | string | Yes | e.g. `Windows 10 LTSB 2016` |
+| `app_version` | string | No | e.g. `3.4.1-build.209` |
 
 ---
 
-### 3.2 ATM Hardware Sensor Log (`ATMH`) — JSON
+### 2.2 ATM Hardware Sensor Log (`ATMH`) — JSON
 
-Emitted by hardware sensors monitoring physical ATM components.
+Hardware health and sensor events from ATM peripherals. Event-driven.
 
-| Field | Type | Nullable | Description |
+| Field | Type | Nullable | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | No | See §1 |
-| `source` | `string` | No | `"ATMH"` |
-| `timestamp` | `string` | No | ISO 8601 UTC |
-| `host_id` | `string` | No | ATM machine ID |
-| `component` | `string` | No | `CASH_CASSETTE`, `CARD_READER`, `RECEIPT_PRINTER`, `SCREEN` |
-| `cassette_level_pct` | `float` | Yes | Percentage of cash remaining (0–100). Only for `CASH_CASSETTE` |
-| `cassette_status` | `string` | Yes | `NORMAL`, `LOW`, `EMPTY`, `OUT_OF_SERVICE`. Only for `CASH_CASSETTE` |
-| `sensor_value` | `float` | Yes | Generic sensor reading for non-cassette components |
-| `sensor_unit` | `string` | Yes | Unit of `sensor_value` (e.g. `CELSIUS`, `RPM`) |
-| `alert` | `boolean` | No | `true` if sensor reading crossed a threshold |
-| `anomaly_flag` | `boolean` | No | `false` in synthetic output |
-| `anomaly_type` | `string` | Yes | `null` in synthetic output |
+| `timestamp` | ISO 8601 | No | UTC |
+| `atm_id` | string | No | Matches ATMA `atm_id` |
+| `correlation_id` | UUID v4 | Yes | Set when hardware event is linked to a transaction |
+| `component` | enum | No | `CASH_DISPENSER` `CARD_READER` `RECEIPT_PRINTER` `KEYPAD` `SCREEN` `CAMERA` `UPS` `NETWORK_ADAPTER` `DOOR_SENSOR` `TEMPERATURE_SENSOR` |
+| `event_type` | enum | No | `STATUS_OK` `WARNING` `FAULT` `SELF_TEST_PASS` `SELF_TEST_FAIL` `CASSETTE_LOW` `CASSETTE_EMPTY` `JAM_DETECTED` `JAM_CLEARED` `DOOR_OPEN` `DOOR_CLOSED` `TEMPERATURE_HIGH` `TEMPERATURE_NORMAL` `POWER_RESTORED` `POWER_FAILURE` |
+| `severity` | enum | No | `INFO` `WARNING` `CRITICAL` |
+| `message` | string | No | Human-readable description. Max 256 chars |
+| `metric_name` | string | Yes | e.g. `cassette_note_count`, `internal_temp_celsius` |
+| `metric_value` | number | Yes | Numeric metric reading |
+| `metric_unit` | string | Yes | e.g. `notes`, `celsius`, `volts` |
+| `threshold_value` | number | Yes | Threshold that triggered WARNING/CRITICAL |
+| `firmware_version` | string | Yes | e.g. `FW-2.1.4` |
+
+> **A2 signal:** `event_type` steps `CASSETTE_LOW` -> `CASSETTE_EMPTY` on
+> `component=CASH_DISPENSER`, with `metric_name=cassette_note_count` declining.
 
 ---
 
-### 3.3 Terminal Handler App Log (`TERM`) — JSON
+### 2.3 Terminal Handler Application Log (`TERM`) — JSON
 
-Emitted by the Terminal Handler service that mediates between the ATM and the banking network.
+Java-based Terminal Handler service running in Docker on GCP. Structured logging via SLF4J/Logback.
 
-| Field | Type | Nullable | Description |
+| Field | Type | Nullable | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | No | See §1 |
-| `source` | `string` | No | `"TERM"` |
-| `timestamp` | `string` | No | ISO 8601 UTC |
-| `host_id` | `string` | No | Terminal Handler service instance ID |
-| `session_id` | `string` | No | Banking network session identifier |
-| `message_type` | `string` | No | `AUTHORISATION_REQUEST`, `AUTHORISATION_RESPONSE`, `SESSION_OPEN`, `SESSION_CLOSE`, `HEARTBEAT`, `ERROR` |
-| `latency_ms` | `integer` | Yes | Round-trip latency to banking network |
-| `status` | `string` | No | `SUCCESS`, `FAILURE`, `TIMEOUT` |
-| `retry_count` | `integer` | No | Number of retries attempted (0 = first attempt succeeded) |
-| `container_restart` | `boolean` | No | `true` if this event was the first after a container restart |
-| `anomaly_flag` | `boolean` | No | `false` in synthetic output |
-| `anomaly_type` | `string` | Yes | `null` in synthetic output |
+| `timestamp` | ISO 8601 | No | UTC |
+| `log_level` | enum | No | `TRACE` `DEBUG` `INFO` `WARN` `ERROR` `FATAL` |
+| `service_name` | string | No | `terminal-handler` |
+| `service_version` | string | No | e.g. `2.7.0-SNAPSHOT` |
+| `container_id` | string | Yes | Short Docker container ID, 12 hex chars |
+| `pod_name` | string | Yes | GCP/Kubernetes pod name |
+| `correlation_id` | UUID v4 | Yes | Shared with originating ATM event |
+| `transaction_id` | UUID v4 | Yes | Banking transaction ID |
+| `atm_id` | string | Yes | Originating ATM. Null for non-ATM events |
+| `event_type` | enum | No | `REQUEST_RECEIVED` `REQUEST_FORWARDED` `RESPONSE_SENT` `AUTH_SUCCESS` `AUTH_FAILURE` `DB_QUERY` `DB_ERROR` `KAFKA_PUBLISH` `KAFKA_CONSUME` `NETWORK_TIMEOUT` `HEALTH_CHECK` `STARTUP` `SHUTDOWN` `EXCEPTION` `UNKNOWN` |
+| `message` | string | No | Human-readable log message. Max 1024 chars |
+| `logger_name` | string | Yes | Fully qualified Java class, e.g. `com.synthbank.terminalhandler.TransactionService` |
+| `thread_name` | string | Yes | JVM thread name, e.g. `http-nio-8080-exec-3` |
+| `response_time_ms` | integer | Yes | End-to-end request processing time. Null for non-request events |
+| `http_status_code` | integer | Yes | HTTP status code. Null if not applicable |
+| `exception_class` | string | Yes | Java exception class name. Null if no exception |
+| `exception_message` | string | Yes | Exception message + partial stack trace. Max 2048 chars |
+| `db_query_time_ms` | integer | Yes | DB query execution time. Null if no DB operation |
+| `environment` | enum | No | `dev` `staging` `prod-sim` |
+
+> **A4 signal:** `event_type=STARTUP` repeated in short succession with changing
+> `container_id` values; `FATAL` events with `exception_class=OutOfMemoryError`.
 
 ---
 
-### 3.4 Kafka ATM Metrics Stream (`KAFK`) — JSON
+### 2.4 Kafka ATM Metrics Stream (`KAFK`) — JSON
 
-Events consumed from the Kafka topic that carries aggregated ATM metrics.
+Published by Terminal Handler each minute per ATM. Kafka topic: `atm-metrics`.
 
-| Field | Type | Nullable | Description |
+| Field | Type | Nullable | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | No | See §1 |
-| `source` | `string` | No | `"KAFK"` |
-| `timestamp` | `string` | No | ISO 8601 UTC |
-| `host_id` | `string` | No | Kafka producer (ATM) ID |
-| `topic` | `string` | No | Kafka topic name |
-| `partition` | `integer` | No | Kafka partition number |
-| `offset` | `integer` | No | Kafka message offset |
-| `event_sequence` | `integer` | No | Monotonically increasing per `host_id`; gaps or resets indicate A7 |
-| `transaction_volume` | `integer` | No | Number of transactions in this window |
-| `success_rate_pct` | `float` | No | Percentage of successful transactions (0–100) |
-| `avg_response_time_ms` | `float` | No | Average response time across window |
-| `anomaly_flag` | `boolean` | No | `false` in synthetic output |
-| `anomaly_type` | `string` | Yes | `null` in synthetic output |
+| `timestamp` | ISO 8601 | No | UTC — when metric snapshot was published |
+| `event_id` | UUID v4 | No | Unique per Kafka message |
+| `correlation_id` | UUID v4 | Yes | Links to ATM App Log / Terminal Handler for same transaction window |
+| `atm_id` | string | No | ATM that produced the metrics; also used as Kafka message key |
+| `atm_status` | enum | No | `Online` `Offline` `In Service` `In Supervisor` `Out of Service` |
+| `transaction_rate_tps` | number | No | Transactions per second in current window |
+| `response_time_ms` | integer | No | Average response time across window (ms) |
+| `transaction_volume` | integer | No | Cumulative transaction count since last reset |
+| `transaction_success_rate` | number | No | Percentage of successful transactions (0-100) |
+| `transaction_failure_reason` | enum | No | `NONE` `NETWORK_TIMEOUT` `HOST_UNAVAILABLE` `CARD_DECLINED` `INSUFFICIENT_FUNDS` `INVALID_PIN` `CASH_DISPENSE_ERROR` `CARD_JAM` `SESSION_TIMEOUT` `MALFORMED_REQUEST` `UNKNOWN_ERROR` |
+| `failure_count` | integer | No | Failed transactions in this window |
+| `window_duration_seconds` | integer | No | Aggregation window duration |
+| `kafka_partition` | integer | Yes | Kafka partition |
+| `kafka_offset` | integer | Yes | Kafka offset |
+
+> **A7 signal:** Timestamp not monotonic vs. previous offset, or `atm_status=null`
+> / missing required fields (schema validation failure).
 
 ---
 
-### 3.5 Prometheus Metrics (`PROM`) — CSV
+### 2.5 Prometheus Metrics (`PROM`) — CSV
 
-Scraped time-series metrics from the JVM and application layer.
+Scraped from Terminal Handler Java app `/metrics` endpoint every 15 seconds.
 
-| Column | Type | Nullable | Description |
+| Column | Type | Nullable | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | No | See §1 |
-| `source` | `string` | No | `PROM` |
-| `timestamp` | `string` | No | ISO 8601 UTC |
-| `host_id` | `string` | No | Service instance ID |
-| `metric_name` | `string` | No | Prometheus metric name e.g. `jvm_memory_used_bytes` |
-| `metric_value` | `float` | No | Current metric value |
-| `metric_unit` | `string` | No | Unit string e.g. `bytes`, `seconds`, `ratio` |
-| `label_job` | `string` | No | Prometheus `job` label |
-| `label_instance` | `string` | No | Prometheus `instance` label |
-| `anomaly_flag` | `boolean` | No | `false` in synthetic output |
-| `anomaly_type` | `string` | Yes | `null` in synthetic output |
+| `timestamp` | ISO 8601 | No | UTC scrape time |
+| `metric_name` | string | No | Prometheus snake_case name, e.g. `jvm_memory_used_bytes` |
+| `metric_type` | enum | No | `counter` `gauge` `histogram` `summary` `untyped` |
+| `metric_value` | number | No | Metric sample value |
+| `service_name` | string | No | Service exposing the metric, e.g. `terminal-handler` |
+| `pod_name` | string | Yes | Kubernetes pod name |
+| `container_id` | string | Yes | Docker container short ID |
+| `label_area` | string | Yes | Prometheus `area` label (e.g. `heap`, `nonheap`) |
+| `label_env` | string | Yes | Prometheus `env` label |
+| `help_text` | string | Yes | Prometheus HELP descriptor |
+
+**Key metrics:** `jvm_memory_used_bytes`, `jvm_memory_max_bytes`, `jvm_gc_pause_seconds_sum`, `process_cpu_usage`, `http_server_requests_seconds_count`, `kafka_producer_record_error_total`, `db_connection_pool_active`
+
+> **A3 signal:** `jvm_memory_used_bytes` rising monotonically (300 MB -> ~1 GB+)
+> with `jvm_gc_pause_seconds_sum` increasing (GC thrashing).
 
 ---
 
-### 3.6 Windows OS Metrics Log (`WINOS`) — CSV
+### 2.6 Windows OS Metrics (`WINOS`) — CSV
 
-Periodic OS-level metrics collected from Windows hosts running ATM software.
+OS-level metrics from Windows hosts running ATM software. Collected every 60 seconds.
 
-| Column | Type | Nullable | Description |
+| Column | Type | Nullable | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | No | See §1 |
-| `source` | `string` | No | `WINOS` |
-| `timestamp` | `string` | No | ISO 8601 UTC |
-| `host_id` | `string` | No | Windows hostname |
-| `cpu_usage_pct` | `float` | No | CPU utilisation (0–100) |
-| `memory_used_mb` | `float` | No | Physical memory used in MB |
-| `memory_total_mb` | `float` | No | Total physical memory in MB |
-| `memory_usage_pct` | `float` | No | `memory_used_mb / memory_total_mb * 100` |
-| `disk_read_mbps` | `float` | No | Disk read throughput MB/s |
-| `disk_write_mbps` | `float` | No | Disk write throughput MB/s |
-| `page_faults_per_sec` | `float` | No | OS page fault rate |
-| `anomaly_flag` | `boolean` | No | `false` in synthetic output |
-| `anomaly_type` | `string` | Yes | `null` in synthetic output |
+| `timestamp` | ISO 8601 | No | UTC collection time |
+| `atm_id` | string | No | Matches `atm_id` on other sources |
+| `hostname` | string | No | Windows hostname, e.g. `ATM-HOST-0042` |
+| `os_version` | string | Yes | e.g. `Windows 10 LTSB 2016 Build 14393` |
+| `cpu_usage_percent` | number | No | Total CPU utilisation (0-100) |
+| `memory_used_mb` | number | No | Physical RAM in use (MB) |
+| `memory_total_mb` | number | No | Total physical RAM (MB) |
+| `memory_usage_percent` | number | Yes | Derived: `memory_used_mb / memory_total_mb * 100` |
+| `disk_read_bytes_per_sec` | number | Yes | Disk read throughput (bytes/s) |
+| `disk_write_bytes_per_sec` | number | Yes | Disk write throughput (bytes/s) |
+| `disk_free_gb` | number | No | Free disk space on primary volume (GB) |
+| `network_bytes_sent_per_sec` | number | Yes | Outbound network throughput (bytes/s) |
+| `network_bytes_recv_per_sec` | number | Yes | Inbound network throughput (bytes/s) |
+| `network_errors` | integer | Yes | Network interface error count since last collection |
+| `process_count` | integer | Yes | Total active OS processes |
+| `system_uptime_seconds` | integer | Yes | Seconds since last OS boot |
+| `event_log_errors_last_min` | integer | Yes | Windows Event Log ERROR entries in last minute |
+
+> **A6 signal:** `memory_usage_percent` escalating toward 100%, `network_errors`
+> growing, `cpu_usage_percent` rising. Followed by `TIMEOUT` events in ATMA.
 
 ---
 
-### 3.7 GCP Cloud Metrics (`GCP`) — CSV
+### 2.7 GCP Cloud Metrics (`GCP`) — CSV
 
-Cloud-level metrics for containerised services running in Google Cloud Platform.
+Infrastructure metrics for VM instances and containers hosting Terminal Handler. Collected every 60 seconds.
 
-| Column | Type | Nullable | Description |
+| Column | Type | Nullable | Notes |
 |---|---|---|---|
-| `correlation_id` | `string` | No | See §1 |
-| `source` | `string` | No | `GCP` |
-| `timestamp` | `string` | No | ISO 8601 UTC |
-| `host_id` | `string` | No | GCP container/instance name |
-| `service_name` | `string` | No | GCP service identifier |
-| `cpu_usage_pct` | `float` | No | Container CPU utilisation (0–100) |
-| `memory_usage_pct` | `float` | No | Container memory utilisation (0–100) |
-| `restart_count` | `integer` | No | Cumulative container restarts; increase indicates A4 |
-| `network_in_mbps` | `float` | No | Inbound network MB/s |
-| `network_out_mbps` | `float` | No | Outbound network MB/s |
-| `anomaly_flag` | `boolean` | No | `false` in synthetic output |
-| `anomaly_type` | `string` | Yes | `null` in synthetic output |
+| `timestamp` | ISO 8601 | No | UTC sample time |
+| `project_id` | string | No | GCP project ID, e.g. `synth-banking-sim-001` |
+| `resource_type` | enum | No | `gce_instance` `gke_container` `cloud_sql_instance` |
+| `resource_id` | string | No | Pod name, instance name, or SQL instance |
+| `zone` | string | Yes | GCP zone, e.g. `europe-west2-b` |
+| `metric_name` | string | No | GCP metric path, e.g. `container/cpu/usage_time` |
+| `metric_value` | number | No | Metric sample value |
+| `metric_unit` | string | Yes | GCP Metrics unit notation, e.g. `s{CPU}` |
+| `cpu_usage_percent` | number | Yes | Container/VM CPU utilisation (0-100) |
+| `memory_usage_bytes` | integer | Yes | Memory consumed by container (bytes) |
+| `memory_limit_bytes` | integer | Yes | Memory limit assigned to container (bytes) |
+| `network_ingress_bytes` | integer | Yes | Network bytes received in interval |
+| `network_egress_bytes` | integer | Yes | Network bytes sent in interval |
+| `restart_count` | integer | Yes | Cumulative container restarts |
+| `label_app` | string | Yes | GCP label `app` |
+| `label_env` | string | Yes | GCP label `env` |
+| `label_version` | string | Yes | GCP label `version` |
+
+> **A3 signal:** `memory_usage_bytes` climbing alongside Prometheus JVM heap.
+> **A4 signal:** `restart_count` incrementing; matches TERM `container_id` changes.
 
 ---
 
-## 4. Anomaly Signatures Reference
-
-Summarised here so the anomaly detection and synthetic data layers can agree on what to inject/detect.
+## 3. Anomaly Signatures Reference
 
 | ID | Name | Primary Sources | Key Signals |
 |---|---|---|---|
-| A1 | Network timeout cascade | ATMA, KAFK, TERM | `status=TIMEOUT`, rising `network_latency_ms`, falling `success_rate_pct`, increasing `retry_count` |
-| A2 | Cash cassette low → empty → OOS | ATMH, KAFK | `cassette_level_pct` declining, `cassette_status` stepping LOW→EMPTY→OUT_OF_SERVICE, transaction volume drops |
-| A3 | JVM memory leak | PROM, GCP | `jvm_memory_used_bytes` rising monotonically without GC relief, `memory_usage_pct` climbing |
-| A4 | Container restart loop | GCP, TERM | `restart_count` incrementing repeatedly, `container_restart=true` events in TERM |
-| A5 | High response time + success rate drop | KAFK, ATMA | `avg_response_time_ms` spike, `success_rate_pct` drop in same window, `response_time_ms` outliers |
-| A6 | OS memory pressure → app timeout | WINOS, ATMA | `memory_usage_pct` > 90, rising `page_faults_per_sec`, subsequent `status=TIMEOUT` in ATMA |
-| A7 | Out-of-order / malformed Kafka event | KAFK | `event_sequence` gap or reset, malformed `timestamp` or missing required field |
+| A1 | Network timeout cascade | ATMA, KAFK, TERM | ATMA `event_type=NETWORK_DISCONNECT`->`TIMEOUT`; KAFK `atm_status=Offline`, `transaction_failure_reason=HOST_UNAVAILABLE`; TERM `event_type=NETWORK_TIMEOUT` |
+| A2 | Cash cassette depletion -> OOS | ATMH, KAFK | ATMH `event_type` steps `CASSETTE_LOW`->`CASSETTE_EMPTY`; KAFK `atm_status=Out of Service`, `transaction_rate_tps=0` |
+| A3 | JVM memory leak -> OOM | PROM, GCP, TERM | PROM `jvm_memory_used_bytes` rising, `jvm_gc_pause_seconds_sum` spiking; TERM FATAL `OutOfMemoryError` |
+| A4 | Container restart loop | GCP, TERM | GCP `restart_count` incrementing; TERM repeated `event_type=STARTUP` with new `container_id` |
+| A5 | High response time + success drop | KAFK, ATMA | KAFK `response_time_ms` >> baseline, `transaction_success_rate` drop, `failure_count` spike; ATMA `event_type=TIMEOUT` |
+| A6 | OS memory pressure -> app timeout | WINOS, ATMA | WINOS `memory_usage_percent`->~100%, `network_errors` rising; ATMA subsequent `event_type=TIMEOUT` |
+| A7 | Malformed / out-of-order Kafka event | KAFK, PROM | KAFK timestamp not monotonic vs offset, or `atm_status=null` / missing fields; PROM non-numeric `metric_value` |
 
 ---
 
-## 5. File Naming Convention
+## 4. File Naming Convention
 
-| Type | Pattern | Example |
+| Source | Format | Filename |
 |---|---|---|
-| Synthetic raw JSON | `data/synthetic/<SOURCE>_<YYYYMMDD>.json` | `data/synthetic/ATMA_20260317.json` |
-| Synthetic raw CSV | `data/synthetic/<SOURCE>_<YYYYMMDD>.csv` | `data/synthetic/PROM_20260317.csv` |
-| Cleaned output (Parquet) | `data/cleaned/<SOURCE>_<YYYYMMDD>.parquet` | `data/cleaned/ATMA_20260317.parquet` |
+| ATM Application Log | JSON | `atm_application_log.json` |
+| ATM Hardware Sensor Log | JSON | `atm_hardware_sensor_log.json` |
+| Terminal Handler App Log | JSON | `terminal_handler_app_log.json` |
+| Kafka ATM Metrics Stream | JSON | `kafka_atm_metrics_stream.json` |
+| Prometheus Metrics | CSV | `prometheus_metrics.csv` |
+| Windows OS Metrics | CSV | `windows_os_metrics.csv` |
+| GCP Cloud Metrics | CSV | `gcp_cloud_metrics.csv` |
 
-All paths are relative to the repository root.
+All synthetic files are written to `data/synthetic/`.

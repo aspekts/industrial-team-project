@@ -15,7 +15,7 @@ def test_src_dirs_exist():
 
 def test_data_dirs_exist():
     root = Path(__file__).parent.parent
-    for d in ("data/synthetic", "data/raw", "data/cleaned"):
+    for d in ("data/synthetic", "data/raw", "data/clean"):
         assert (root / d).exists(), f"Expected {d}/ to exist"
 
 
