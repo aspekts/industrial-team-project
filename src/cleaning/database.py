@@ -118,9 +118,8 @@ class DatabaseHandler:
                 else:
                     for row in rows:
                         print(f"   {row}")
-            except Exception as e:
+            except Exception:
                 print("Master view failed")
 
             # Test if the individual ATM views were created
             cursor.execute("SELECT name FROM sqlite_master WHERE type='view' AND name LIKE 'view_%';")
-            views = cursor.fetchall()

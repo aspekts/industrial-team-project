@@ -27,6 +27,7 @@ error_path   = "data/clean/broken_logs.json"
 
 try:
     os.mkdir(OutputFolder)
+    os.makedirs(os.path.dirname(error_path), exist_ok=True)
 except OSError:
     print("Output folder already exists, continuing...")
 
@@ -37,12 +38,14 @@ except OSError:
 
 def isFileEmpty(filepath):
     # returns True if the file has no content or only whitespace
-    InFile  = open(filepath, 'r', encoding='utf-8')
-    content = InFile.read().strip()
-    InFile.close()
-
-    if len(content) == 0:
-        print("  WARNING: " + filepath + " is empty - skipping.")
+    try:
+        with open(filepath, "r", encoding='utf-8') as InFile:
+            lines = InFile.read().strip()
+            if not lines:
+                return True
+            else:
+                return False
+    except OSError:
         return True
     return False
 
