@@ -8,6 +8,8 @@ from src.dashboard.server import create_app
 from src.analysis.detect import Detection
 from src.ml.scorer import AnomalyScorer
 
+import time
+
 def run_pipeline():
     # Stage 1: Ingest raw log files into a structured format
     run_ingestion()
@@ -15,11 +17,12 @@ def run_pipeline():
     # Stage 2: Clean the ingested data and store it in a SQLite database
     RAW_DATA_DIR = "data/raw"
     CLEANED_DB_PATH = "data/clean/atm_logs.db"
+    ERROR_PATH = "data/clean"
 
     db_handler = DatabaseHandler(db_path=CLEANED_DB_PATH)
     db_handler.setup_database(LOG_SCHEMAS)
 
-    cleaner = LogCleaner(db_handler=db_handler, input_dir=RAW_DATA_DIR)
+    cleaner = LogCleaner(db_handler=db_handler, input_dir=RAW_DATA_DIR, error_dir=ERROR_PATH)
     cleaner.process_all_files()
 
     # Stage 3: Run rules-based anomaly detection and store grouped results
@@ -28,6 +31,17 @@ def run_pipeline():
     # Stage 4: Score anomalies with Isolation Forest and write results back to the database
     scorer = AnomalyScorer(db_path=CLEANED_DB_PATH)
     scorer.score_and_store_anomalies()
+
+def run_simulation(interval_min=5):
+    try:
+        while True:
+            try:
+                run_pipeline()
+            except Exception:
+                continue
+            time.sleep(interval_min * 60)
+    except KeyboardInterrupt:
+        print("Keyboard interrupt.")
 
 if __name__ == "__main__":
     run_pipeline()
