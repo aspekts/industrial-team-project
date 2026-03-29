@@ -723,6 +723,7 @@ p {
 
 .metric-card[data-ui-state="loading"],
 .trend-chart[data-ui-state="loading"],
+.panel-graph[data-ui-state="loading"],
 .mini-graph[data-ui-state="loading"] {
   background-image: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(155, 185, 168, 0.14) 45%, rgba(255, 255, 255, 0) 100%);
   background-size: 220% 100%;
@@ -731,6 +732,7 @@ p {
 
 .metric-card[data-ui-state="unavailable"],
 .trend-chart[data-ui-state="unavailable"],
+.panel-graph[data-ui-state="unavailable"],
 .mini-graph[data-ui-state="unavailable"] {
   border-style: dashed;
   opacity: 0.88;
@@ -1163,6 +1165,80 @@ legend,
   );
   color: #6a6157;
   font-weight: 700;
+}
+
+.status-ok {
+  background: #e0f0e6;
+  color: #1f5145;
+  border: 1px solid #9bb9a8;
+}
+
+.nav-link-action {
+  border-color: #a0bdb4;
+  background: #f0f7f4;
+  color: var(--brand-strong);
+}
+
+.nav-link-action.is-active {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+  color: #fff;
+}
+
+.settings-form {
+  margin-top: 1rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.settings-form fieldset {
+  border: 1px solid rgba(155, 185, 168, 0.4);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+}
+
+.settings-form legend {
+  padding: 0 0.5rem;
+  font-weight: 700;
+  color: var(--brand-strong);
+}
+
+.settings-form .field + .field {
+  margin-top: 0.85rem;
+}
+
+.settings-form input[type="number"],
+.settings-form input[type="email"],
+.settings-form select {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  padding: var(--control-padding-y) var(--control-padding-x);
+  border: 1px solid rgba(155, 185, 168, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--text);
+  margin-top: 0.35rem;
+  font: inherit;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: 0 0 auto;
+}
+
+.status-pill.status-ok {
+  background: #e0f0e6;
+  color: #1f5145;
+  border: 1px solid #9bb9a8;
 }
 
 @media (max-width: 980px) {
