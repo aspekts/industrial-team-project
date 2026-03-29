@@ -199,7 +199,7 @@ class TestATMAppLogParser(BaseTestCase):
 
         ingest.loadATMAppLog()
 
-        rows = self.readOutput("atm_application_logs.txt")
+        rows = self.readOutput("atm_application_log.txt")
         # header + 1 data row
         self.assertEqual(len(rows), 2)
 
@@ -209,7 +209,7 @@ class TestATMAppLogParser(BaseTestCase):
 
         ingest.loadATMAppLog()
 
-        rows = self.readOutput("atm_application_logs.txt")
+        rows = self.readOutput("atm_application_log.txt")
         dataRow = rows[1]
 
         self.assertEqual(dataRow[0], "2026-03-05T00:00:00.000Z")  # timestamp
@@ -226,7 +226,7 @@ class TestATMAppLogParser(BaseTestCase):
 
         ingest.loadATMAppLog()
 
-        rows = self.readOutput("atm_application_logs.txt")
+        rows = self.readOutput("atm_application_log.txt")
         self.assertEqual(rows[0][0], "timestamp")
         self.assertEqual(rows[0][2], "atm_id")
 
@@ -239,7 +239,7 @@ class TestATMHardwareLogParser(BaseTestCase):
 
         ingest.loadATMHardwareLog()
 
-        rows = self.readOutput("atm_hardware_sensor_logs.txt")
+        rows = self.readOutput("atm_hardware_sensor_log.txt")
         self.assertEqual(len(rows), 2)
 
     def test_correct_values_are_written(self):
@@ -248,7 +248,7 @@ class TestATMHardwareLogParser(BaseTestCase):
 
         ingest.loadATMHardwareLog()
 
-        rows = self.readOutput("atm_hardware_sensor_logs.txt")
+        rows = self.readOutput("atm_hardware_sensor_log.txt")
         dataRow = rows[1]
 
         self.assertEqual(dataRow[0], "2026-03-05T00:00:00.000Z")  # timestamp
@@ -537,7 +537,7 @@ class TestMalformedInputInLoaders(BaseTestCase):
 
         ingest.loadATMAppLog()
 
-        rows = self.readOutput("atm_application_logs.txt")
+        rows = self.readOutput("atm_application_log.txt")
         # only the header row, no data rows written
         self.assertEqual(len(rows), 1)
 
@@ -560,7 +560,7 @@ class TestMalformedInputInLoaders(BaseTestCase):
 
         ingest.loadATMAppLog()
 
-        rows = self.readOutput("atm_application_logs.txt")
+        rows = self.readOutput("atm_application_log.txt")
         self.assertEqual(len(rows), 1)
 
     def test_atm_app_log_skips_empty_file(self):
@@ -570,7 +570,7 @@ class TestMalformedInputInLoaders(BaseTestCase):
         # should return early without creating an output file
         ingest.loadATMAppLog()
 
-        outputPath = os.path.join(self.testDir, "atm_application_logs.txt")
+        outputPath = os.path.join(self.testDir, "atm_application_log.txt")
         self.assertFalse(os.path.exists(outputPath))
 
     def test_atm_app_log_writes_good_skips_bad(self):
@@ -604,7 +604,7 @@ class TestMalformedInputInLoaders(BaseTestCase):
 
         ingest.loadATMAppLog()
 
-        rows = self.readOutput("atm_application_logs.txt")
+        rows = self.readOutput("atm_application_log.txt")
         # header + 1 good row only
         self.assertEqual(len(rows), 2)
         self.assertEqual(rows[1][2], "ATM-GB-0001")
@@ -664,7 +664,7 @@ class TestMalformedInputInLoaders(BaseTestCase):
     
         ingest.loadATMAppLog()
     
-        rows = self.readOutput("atm_application_logs.txt")
+        rows = self.readOutput("atm_application_log.txt")
         # only the header row — the null record should be skipped entirely
         self.assertEqual(len(rows), 1)
 
