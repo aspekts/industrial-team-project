@@ -490,6 +490,20 @@
             </details>
           </section>
         </div>
+
+        <section class="panel" aria-labelledby="incidents-title" style="margin-top:1.5rem;">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Cross-source correlation</p>
+              <h3 id="incidents-title">Correlated incident groups</h3>
+            </div>
+            <span id="incidents-summary-pill" class="status-pill">Loading...</span>
+          </div>
+          <p class="metric-subnote" style="margin-bottom:0.75rem;">Events grouped by shared <code>correlation_id</code> across sources, with time-window fallback (±5 min) for sources without one.</p>
+          <ul id="incidents-list" class="simple-list compact-list">
+            <li>Loading correlated incidents...</li>
+          </ul>
+        </section>
       </section>
 
       <section class="screen" id="settings" aria-labelledby="settings-title">
