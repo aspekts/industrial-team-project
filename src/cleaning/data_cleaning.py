@@ -3,12 +3,13 @@ import json
 import os
 
 from src.cleaning.schemas import LOG_SCHEMAS
+from src.cleaning.schemas import LogFilter
 
 class LogCleaner:
     def __init__(self, db_handler, input_dir, error_dir):
         self.input_dir = input_dir
         self.db_handler = db_handler
-        self.error_dir = error_dir
+        self.filter = LogFilter()
 
     def find_schema(self, raw_line):
         """Returns the schema name if keys match exactly."""
@@ -110,8 +111,7 @@ class LogCleaner:
 
                     try:
                         clean_line = self.convert_types(line, schema)
-                        if not self.validate_types(clean_line, schema):
-                            broken_logs.append(line)
+                        if not self.filter.record_validation(clean_line, schema):
                             continue
                         
                         buffer.append((schema, clean_line))
