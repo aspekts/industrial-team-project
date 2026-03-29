@@ -865,7 +865,7 @@ showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : activeRoleCon
 
 async function fetchDashboardData() {
   try {
-    const [summary, scale, snapshot, atmList, alerts, trend, sourceChecks, prioritySummary, winosTrend, mlSummary] =
+    const [summary, scale, snapshot, atmList, alerts, trend, sourceChecks, prioritySummary, winosTrend, mlSummary, incidents] =
       await Promise.all([
         fetch("/api/summary").then((r) => r.json()),
         fetch("/api/scale").then((r) => r.json()),
@@ -877,6 +877,7 @@ async function fetchDashboardData() {
         fetch("/api/priority-summary").then((r) => r.json()),
         fetch("/api/winos-trend").then((r) => r.json()),
         fetch("/api/ml-summary").then((r) => r.json()),
+        fetch("/api/incidents").then((r) => r.json()),
       ]);
 
     if (summary.status === "ok") populateSummary(summary);
@@ -891,6 +892,7 @@ async function fetchDashboardData() {
     if (winosTrend.status === "ok") populateWinosMiniGraph(winosTrend);
     if (sourceChecks.status === "ok") populateSourceChecks(sourceChecks.checks);
     if (mlSummary.status === "ok") populateMlSummary(mlSummary);
+    if (incidents.status === "ok") populateIncidents(incidents);
     if (prioritySummary.status === "ok") {
       currentPrioritySummary = prioritySummary;
       populatePrioritySummary(prioritySummary);
@@ -1496,6 +1498,39 @@ function populateWinosMiniGraph(data) {
   circle.setAttribute("cy", lastCoord.y);
   circle.setAttribute("r", "5");
   svgEl.appendChild(circle);
+}
+
+function populateIncidents(data) {
+  const list = document.getElementById("incidents-list");
+  const pill = document.getElementById("incidents-summary-pill");
+
+  const total = data.total || 0;
+  const critical = data.incidents.filter((i) => i.severity === "CRITICAL").length;
+
+  if (pill) {
+    pill.textContent = critical > 0 ? `${critical} Critical` : total > 0 ? `${total} grouped` : "None";
+    pill.className = `status-pill ${critical > 0 ? "status-critical" : total > 0 ? "status-warning" : "status-ok"}`;
+  }
+
+  if (!list) return;
+  if (!total) {
+    list.innerHTML = "<li>No correlated incidents detected — run pipeline to generate data.</li>";
+    return;
+  }
+
+  list.innerHTML = data.incidents
+    .map((i) => {
+      const strategyLabel = i.strategy === "correlation_id" ? "correlation_id match" : "time-window (±5 min)";
+      const pillClass = i.severity === "CRITICAL" ? "status-critical" : "status-warning";
+      return `<li>
+        <strong>${i.incident_id}</strong>
+        <span class="status-pill ${pillClass}" style="margin-left:0.5rem;">${i.severity}</span>
+        <br><span class="metric-subnote">Sources: ${i.sources} — ATMs: ${i.atm_ids} — Types: ${i.anomaly_types}</span>
+        <br><span class="metric-subnote">${i.description}</span>
+        <br><span class="metric-subnote">${i.event_count} event${i.event_count !== 1 ? "s" : ""} · ${strategyLabel}${i.earliest_ts ? " · " + i.earliest_ts.slice(0, 16) : ""}</span>
+      </li>`;
+    })
+    .join("");
 }
 
 function populateMlSummary(data) {

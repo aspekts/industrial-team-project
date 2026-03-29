@@ -6,6 +6,7 @@ from src.cleaning.data_cleaning import LogCleaner
 from src.cleaning.database import DatabaseHandler
 from src.dashboard.server import create_app
 from src.analysis.detect import Detection
+from src.analysis.correlate import Correlator
 from src.ml.scorer import AnomalyScorer
 
 def run_pipeline():
@@ -28,6 +29,9 @@ def run_pipeline():
     # Stage 4: Score anomalies with Isolation Forest and write results back to the database
     scorer = AnomalyScorer(db_path=CLEANED_DB_PATH)
     scorer.score_and_store_anomalies()
+
+    # Stage 5: Correlate detections into cross-source incidents
+    Correlator(db_path=CLEANED_DB_PATH).store_incidents()
 
 if __name__ == "__main__":
     run_pipeline()

@@ -792,6 +792,27 @@ def create_app(db_path: Path | None = None) -> Flask:
             ],
         })
 
+    @app.get("/api/incidents")
+    def api_incidents():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "incidents": []})
+        with _connect() as conn:
+            if not _table_exists(conn, "incidents"):
+                return jsonify({"status": "ok", "incidents": [], "total": 0})
+            rows = conn.execute(
+                """
+                SELECT incident_id, correlation_id, atm_ids, sources, anomaly_types,
+                       severity, event_count, earliest_ts, latest_ts, description, strategy
+                FROM incidents
+                ORDER BY CASE WHEN severity='CRITICAL' THEN 0 ELSE 1 END, earliest_ts DESC
+                """
+            ).fetchall()
+        cols = ["incident_id", "correlation_id", "atm_ids", "sources", "anomaly_types",
+                "severity", "event_count", "earliest_ts", "latest_ts", "description", "strategy"]
+        incidents = [dict(zip(cols, r)) for r in rows]
+        return jsonify({"status": "ok", "incidents": incidents, "total": len(incidents)})
+
     @app.get("/api/ml-summary")
     def api_ml_summary():
         db_file = _db()
