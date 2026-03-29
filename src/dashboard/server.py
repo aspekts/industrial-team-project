@@ -474,6 +474,367 @@ def create_app(db_path: Path | None = None) -> Flask:
 
         return jsonify({"status": "ok", "critical": critical, "warning": warning})
 
+    @app.get("/api/trend")
+    def api_trend():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "points": []})
+
+        with _connect() as conn:
+            if not _table_exists(conn, "ATMA"):
+                return jsonify({"status": "ok", "points": [], "peak_hour": None, "peak_errors": 0})
+
+            rows = conn.execute(
+                """
+                SELECT
+                    strftime('%H', timestamp) AS hour,
+                    COUNT(*) AS total_events,
+                    COUNT(CASE WHEN event_type IN ('ERROR','TIMEOUT','NETWORK_DISCONNECT')
+                               THEN 1 END) AS error_count
+                FROM ATMA
+                GROUP BY hour
+                ORDER BY hour
+                """
+            ).fetchall()
+
+        points = [{"hour": row[0], "total": row[1], "errors": row[2] or 0} for row in rows if row[0]]
+        peak = max(points, key=lambda p: p["errors"], default=None)
+        return jsonify({
+            "status": "ok",
+            "points": points,
+            "peak_hour": peak["hour"] if peak else None,
+            "peak_errors": peak["errors"] if peak else 0,
+        })
+
+    @app.get("/api/source-checks")
+    def api_source_checks():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "checks": []})
+
+        checks = []
+        with _connect() as conn:
+            if _table_exists(conn, "KAFK"):
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM KAFK WHERE failure_count > 0"
+                ).fetchone()
+                kafk_failures = row[0] if row else 0
+                checks.append({
+                    "key": "kafk_failures",
+                    "label": "KAFK transaction failures",
+                    "value": kafk_failures,
+                    "detail": f"{kafk_failures} windows with failure_count > 0" if kafk_failures else "No failure windows detected",
+                    "severity": "critical" if kafk_failures > 0 else "ok",
+                })
+            else:
+                checks.append({"key": "kafk_failures", "label": "KAFK transaction failures",
+                                "value": 0, "detail": "KAFK table not present", "severity": "absent"})
+
+            if _table_exists(conn, "TERM"):
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM TERM WHERE log_level IN ('ERROR','FATAL')"
+                ).fetchone()
+                term_errors = row[0] if row else 0
+                checks.append({
+                    "key": "term_errors",
+                    "label": "Terminal handler runtime",
+                    "value": term_errors,
+                    "detail": f"{term_errors} ERROR/FATAL events in terminal handler" if term_errors else "No error-level events detected",
+                    "severity": "warning" if term_errors > 0 else "ok",
+                })
+            else:
+                checks.append({"key": "term_errors", "label": "Terminal handler runtime",
+                                "value": 0, "detail": "TERM table not present", "severity": "absent"})
+
+            if _table_exists(conn, "WINOS"):
+                row = conn.execute(
+                    "SELECT COUNT(*), MAX(cpu_usage_percent) FROM WINOS WHERE cpu_usage_percent > 80"
+                ).fetchone()
+                pressure_count = row[0] if row else 0
+                peak_cpu = int(row[1]) if row and row[1] else 0
+                checks.append({
+                    "key": "winos_pressure",
+                    "label": "Windows host health",
+                    "value": pressure_count,
+                    "detail": f"{pressure_count} samples above 80% CPU (peak {peak_cpu}%)" if pressure_count else "CPU within normal range",
+                    "severity": "critical" if pressure_count > 0 else "ok",
+                })
+            else:
+                checks.append({"key": "winos_pressure", "label": "Windows host health",
+                                "value": 0, "detail": "WINOS table not present", "severity": "absent"})
+
+        return jsonify({"status": "ok", "checks": checks})
+
+    @app.get("/api/priority-summary")
+    def api_priority_summary():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable"})
+
+        with _connect() as conn:
+            if not _table_exists(conn, "analysis_detections"):
+                return jsonify({"status": "ok", "has_critical": False, "anomaly_name": None})
+
+            top_row = conn.execute(
+                """
+                SELECT anomaly_type, anomaly_name, severity, source, atm_id,
+                       detection_timestamp, description, event_count
+                FROM analysis_detections
+                WHERE severity = 'CRITICAL'
+                ORDER BY detected_at DESC
+                LIMIT 1
+                """
+            ).fetchone()
+
+            if not top_row:
+                top_row = conn.execute(
+                    """
+                    SELECT anomaly_type, anomaly_name, severity, source, atm_id,
+                           detection_timestamp, description, event_count
+                    FROM analysis_detections
+                    ORDER BY detected_at DESC
+                    LIMIT 1
+                    """
+                ).fetchone()
+
+            if not top_row:
+                return jsonify({"status": "ok", "has_critical": False, "anomaly_name": None})
+
+            anomaly_type, anomaly_name, severity, source, atm_id, ts, desc, event_count = top_row
+
+            corr_row = conn.execute(
+                "SELECT GROUP_CONCAT(DISTINCT source) FROM analysis_detections WHERE atm_id = ?",
+                (atm_id,),
+            ).fetchone()
+            correlated_sources = corr_row[0] if corr_row and corr_row[0] else source
+
+            crit_count = conn.execute(
+                "SELECT COUNT(*) FROM analysis_detections WHERE severity = 'CRITICAL'"
+            ).fetchone()
+            total_critical = crit_count[0] if crit_count else 0
+
+        return jsonify({
+            "status": "ok",
+            "has_critical": severity == "CRITICAL",
+            "anomaly_name": anomaly_name,
+            "anomaly_type": anomaly_type,
+            "severity": severity,
+            "source": source,
+            "atm_id": atm_id or "N/A",
+            "detection_timestamp": ts,
+            "description": desc or "",
+            "event_count": event_count or 0,
+            "correlated_sources": correlated_sources,
+            "total_critical": total_critical,
+            "primary_signal": f"{anomaly_name} ({anomaly_type}) — {source}",
+            "secondary_signal": f"{event_count} events on {atm_id or 'multiple ATMs'} since {(ts or '')[:10]}",
+            "impact": f"{total_critical} critical detection group{'s' if total_critical != 1 else ''} active",
+            "next_review_area": f"Cross-reference {correlated_sources} for {atm_id or 'affected ATMs'}",
+            "next_best_action": f"Open anomaly groups for {atm_id or 'affected ATMs'} and review {source} evidence",
+        })
+
+    @app.get("/api/me")
+    def api_me():
+        username = session.get("user_name", "")
+        role = session.get("role", "")
+        if not username:
+            return jsonify({"status": "unauthenticated", "username": "", "role": ""})
+        return jsonify({"status": "ok", "username": username, "role": role})
+
+    @app.get("/api/winos-trend")
+    def api_winos_trend():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "points": []})
+
+        with _connect() as conn:
+            if not _table_exists(conn, "WINOS"):
+                return jsonify({"status": "ok", "points": [], "peak_hour": None, "peak_cpu": 0})
+
+            rows = conn.execute(
+                """
+                SELECT
+                    strftime('%H', timestamp) AS hour,
+                    AVG(CAST(cpu_usage_percent AS REAL)) AS avg_cpu,
+                    MAX(CAST(cpu_usage_percent AS REAL)) AS max_cpu
+                FROM WINOS
+                GROUP BY hour
+                ORDER BY hour
+                """
+            ).fetchall()
+
+        points = [
+            {"hour": row[0], "avg_cpu": round(row[1] or 0, 1), "max_cpu": round(row[2] or 0, 1)}
+            for row in rows
+            if row[0]
+        ]
+        peak = max(points, key=lambda p: p["max_cpu"], default=None)
+        return jsonify({
+            "status": "ok",
+            "points": points,
+            "peak_hour": peak["hour"] if peak else None,
+            "peak_cpu": peak["max_cpu"] if peak else 0,
+        })
+
+    @app.get("/api/atm-detail/<atm_id>")
+    def api_atm_detail(atm_id):
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable"})
+
+        with _connect() as conn:
+            if not _table_exists(conn, "ATMA"):
+                return jsonify({"status": "not_found", "atm_id": atm_id})
+
+            atma_row = conn.execute(
+                """
+                SELECT location_code, MAX(timestamp) AS last_ts, atm_status,
+                       COUNT(CASE WHEN event_type IN ('ERROR','TIMEOUT','NETWORK_DISCONNECT')
+                                  THEN 1 END) AS error_count
+                FROM ATMA WHERE atm_id = ?
+                GROUP BY location_code, atm_status
+                ORDER BY last_ts DESC LIMIT 1
+                """,
+                (atm_id,),
+            ).fetchone()
+
+            if not atma_row:
+                return jsonify({"status": "not_found", "atm_id": atm_id})
+
+            location_code, last_ts, atm_status, error_count = atma_row
+
+            timeline_rows = conn.execute(
+                """
+                SELECT timestamp, event_type, component, message, error_code
+                FROM ATMA WHERE atm_id = ?
+                ORDER BY timestamp DESC LIMIT 6
+                """,
+                (atm_id,),
+            ).fetchall()
+
+            detections = []
+            if _table_exists(conn, "analysis_detections"):
+                det_rows = conn.execute(
+                    """
+                    SELECT anomaly_type, anomaly_name, severity, source, description, event_count
+                    FROM analysis_detections WHERE atm_id = ?
+                    ORDER BY CASE WHEN severity='CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
+                    """,
+                    (atm_id,),
+                ).fetchall()
+                detections = [
+                    {"anomaly_type": r[0], "anomaly_name": r[1], "severity": r[2],
+                     "source": r[3], "description": r[4], "event_count": r[5]}
+                    for r in det_rows
+                ]
+
+            kafk_summary = None
+            if _table_exists(conn, "KAFK"):
+                kafk_row = conn.execute(
+                    """
+                    SELECT SUM(failure_count), AVG(CAST(transaction_rate_tps AS REAL)),
+                           GROUP_CONCAT(DISTINCT transaction_failure_reason)
+                    FROM KAFK WHERE atm_id = ? AND failure_count > 0
+                    """,
+                    (atm_id,),
+                ).fetchone()
+                if kafk_row and kafk_row[0]:
+                    kafk_summary = {
+                        "total_failures": int(kafk_row[0]),
+                        "avg_tps": round(kafk_row[1] or 0, 1),
+                        "failure_reasons": kafk_row[2] or "None",
+                    }
+
+            winos_summary = None
+            if _table_exists(conn, "WINOS"):
+                winos_row = conn.execute(
+                    """
+                    SELECT cpu_usage_percent, memory_usage_percent, network_errors
+                    FROM WINOS WHERE atm_id = ?
+                    ORDER BY timestamp DESC LIMIT 1
+                    """,
+                    (atm_id,),
+                ).fetchone()
+                if winos_row:
+                    winos_summary = {
+                        "cpu_pct": winos_row[0],
+                        "mem_pct": winos_row[1],
+                        "net_errors": winos_row[2],
+                    }
+
+            atmh_count = 0
+            if _table_exists(conn, "ATMH"):
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM ATMH WHERE atm_id = ? AND severity IN ('CRITICAL','WARNING')",
+                    (atm_id,),
+                ).fetchone()
+                atmh_count = row[0] if row else 0
+
+            all_sources = list({d["source"] for d in detections})
+
+        return jsonify({
+            "status": "ok",
+            "atm_id": atm_id,
+            "location_code": location_code or "N/A",
+            "last_update": last_ts,
+            "atm_status": atm_status or "Unknown",
+            "error_count": error_count or 0,
+            "hw_alerts": atmh_count,
+            "top_detection": detections[0] if detections else None,
+            "detections": detections,
+            "kafk_summary": kafk_summary,
+            "winos_summary": winos_summary,
+            "correlated_sources": ", ".join(all_sources) if all_sources else "N/A",
+            "timeline": [
+                {"timestamp": r[0], "event_type": r[1], "component": r[2],
+                 "message": r[3], "error_code": r[4]}
+                for r in timeline_rows
+            ],
+        })
+
+    @app.get("/api/incidents")
+    def api_incidents():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "incidents": []})
+        with _connect() as conn:
+            if not _table_exists(conn, "incidents"):
+                return jsonify({"status": "ok", "incidents": [], "total": 0})
+            rows = conn.execute(
+                """
+                SELECT incident_id, correlation_id, atm_ids, sources, anomaly_types,
+                       severity, event_count, earliest_ts, latest_ts, description, strategy
+                FROM incidents
+                ORDER BY CASE WHEN severity='CRITICAL' THEN 0 ELSE 1 END, earliest_ts DESC
+                """
+            ).fetchall()
+        cols = ["incident_id", "correlation_id", "atm_ids", "sources", "anomaly_types",
+                "severity", "event_count", "earliest_ts", "latest_ts", "description", "strategy"]
+        incidents = [dict(zip(cols, r)) for r in rows]
+        return jsonify({"status": "ok", "incidents": incidents, "total": len(incidents)})
+
+    @app.get("/api/ml-summary")
+    def api_ml_summary():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable"})
+        with _connect() as conn:
+            if not _table_exists(conn, "ml_anomaly_scores"):
+                return jsonify({"status": "ok", "total_scored": 0, "total_anomalies": 0, "model_version": None, "sources": []})
+            row = conn.execute(
+                "SELECT COUNT(*), SUM(is_anomaly), MAX(model_version) FROM ml_anomaly_scores"
+            ).fetchone()
+            source_rows = conn.execute(
+                "SELECT source, COUNT(*), SUM(is_anomaly) FROM ml_anomaly_scores GROUP BY source"
+            ).fetchall()
+        return jsonify({
+            "status": "ok",
+            "total_scored": row[0] or 0,
+            "total_anomalies": int(row[1] or 0),
+            "model_version": row[2],
+            "sources": [{"source": r[0], "scored": r[1], "anomalies": int(r[2] or 0)} for r in source_rows],
+        })
+
     return app
 
 

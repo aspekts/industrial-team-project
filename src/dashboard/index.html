@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Operations Hub Prototype</title>
+    <title>ATM Operations Console</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -47,24 +47,24 @@
         <section class="scale-panel" aria-labelledby="scale-panel-title">
           <div class="scale-panel-header">
             <p class="eyebrow">Portfolio view</p>
-            <h2 id="scale-panel-title" class="sidebar-panel-title">Synthetic data footprint</h2>
+            <h2 id="scale-panel-title" class="sidebar-panel-title">Data footprint</h2>
           </div>
           <dl class="scale-list">
             <div class="scale-item">
               <dt>Sources</dt>
-              <dd id="scale-sources">Unavailable</dd>
+              <dd id="scale-sources">—</dd>
             </div>
             <div class="scale-item">
               <dt>ATMs</dt>
-              <dd id="scale-atms">Unavailable</dd>
+              <dd id="scale-atms">—</dd>
             </div>
             <div class="scale-item">
               <dt>Window</dt>
-              <dd id="scale-window">Loading...</dd>
+              <dd id="scale-window">—</dd>
             </div>
             <div class="scale-item">
               <dt>Avg TPS</dt>
-              <dd id="scale-avg-tps">Loading...</dd>
+              <dd id="scale-avg-tps">—</dd>
             </div>
           </dl>
         </section>
@@ -85,6 +85,9 @@
           <button class="nav-link" type="button" data-screen-target="settings">
             <span>Settings</span>
           </button>
+          <button class="nav-link nav-link-action" type="button" data-screen-target="action-center">
+            <span>Action center</span>
+          </button>
         </nav>
       </aside>
 
@@ -96,13 +99,13 @@
             <h2 id="dashboard-title">Source-backed operations view</h2>
             <p>Every summary on this page maps to records in ATMA, ATMH, KAFK, PROM, GCP, TERM, or WINOS.</p>
           </div>
-          <span id="dashboard-status-pill" class="status-pill status-critical">Loading...</span>
+          <span id="dashboard-status-pill" class="status-pill">Loading...</span>
         </div>
 
         <section class="critical-banner critical-banner-compact" aria-labelledby="critical-banner-title">
           <div class="critical-banner-copy">
             <p class="eyebrow critical-eyebrow">Immediate action needed</p>
-            <h3 id="critical-banner-title">A role-specific priority summary will appear here when the dashboard is connected to a live endpoint.</h3>
+            <h3 id="critical-banner-title">Loading operational priority...</h3>
           </div>
           <button class="button critical-button" type="button" data-screen-target="alerts">
             View anomaly groups
@@ -110,32 +113,32 @@
         </section>
 
         <div class="metric-grid">
-          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open ATM list. Live ATM coverage is not loaded yet.">
+          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="atm-list" aria-label="Open ATM list">
             <h3>Observed ATMs</h3>
-            <p class="metric-value">Loading...</p>
-            <p class="metric-note">Waiting for backend response.</p>
-            <p class="metric-subnote">Real ATM coverage will render here once the API is connected.</p>
-            <p class="metric-link-hint">View ATM anomaly list</p>
+            <p class="metric-value">—</p>
+            <p class="metric-note">Loading...</p>
+            <p class="metric-subnote">Source-backed from ATMA records</p>
+            <p class="metric-link-hint">View ATM list</p>
           </article>
-          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open ATM application errors. Live error totals are not loaded yet.">
+          <article class="metric-card metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open application errors">
             <h3>ATM app errors</h3>
-            <p class="metric-value">Loading...</p>
-            <p class="metric-note">Waiting for backend response.</p>
-            <p class="metric-subnote">Show source-backed ATMA counts and error codes here.</p>
+            <p class="metric-value">—</p>
+            <p class="metric-note">Loading...</p>
+            <p class="metric-subnote">ERROR, TIMEOUT, and DISCONNECT events in ATMA</p>
             <p class="metric-link-hint">Review application anomalies</p>
           </article>
-          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open ATM hardware alerts. Live ATMH totals are not loaded yet.">
+          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open hardware alerts">
             <h3>Hardware alerts</h3>
-            <p class="metric-value">Loading...</p>
-            <p class="metric-note">Waiting for backend response.</p>
-            <p class="metric-subnote">Show source-backed ATMH warning and critical counts here.</p>
+            <p class="metric-value">—</p>
+            <p class="metric-note">Loading...</p>
+            <p class="metric-subnote">ATMH WARNING and CRITICAL severity events</p>
             <p class="metric-link-hint">Open hardware anomalies</p>
           </article>
-          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open Kafka summary. Live throughput is not loaded yet.">
+          <article class="metric-card metric-card-alert metric-card-action" tabindex="0" role="button" data-screen-target="alerts" aria-label="Open event throughput">
             <h3>Event throughput</h3>
-            <p class="metric-value">Loading...</p>
-            <p class="metric-note">Waiting for backend response.</p>
-            <p class="metric-subnote">Show source-backed KAFK throughput and failure windows here.</p>
+            <p class="metric-value">—</p>
+            <p class="metric-note">Loading...</p>
+            <p class="metric-subnote">KAFK transaction_rate_tps rolling average</p>
             <p class="metric-link-hint">Inspect data flow</p>
           </article>
         </div>
@@ -153,8 +156,8 @@
           </section>
           <section class="info-card" aria-labelledby="summary-title">
             <p class="eyebrow">Product rule</p>
-            <h3 id="summary-title">Unsupported features stay out</h3>
-            <p class="metric-subnote">Region tracking, SLA coverage, and team-routing concepts have been removed until those dimensions exist in the pipeline and schema.</p>
+            <h3 id="summary-title">Evidence over speculation</h3>
+            <p class="metric-subnote">Every alert group shown here is backed by source records. Region tracking, SLA coverage, and team-routing have been excluded until those dimensions exist in the pipeline.</p>
           </section>
         </div>
 
@@ -163,7 +166,7 @@
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Priority item</p>
-                <h3 id="priority-title">Loading role-specific summary...</h3>
+                <h3 id="priority-title">Loading priority anomaly...</h3>
               </div>
               <span class="status-pill status-critical">Loading...</span>
             </div>
@@ -177,26 +180,26 @@
               <div class="incident-scan-item" role="listitem">
                 <div>
                   <span class="incident-scan-label">Secondary signal</span>
-                  <p><strong>Unavailable until backend data is connected.</strong></p>
+                  <p><strong>Loading...</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
                   <span class="incident-scan-label">Impact</span>
-                  <p><strong>Unavailable until backend data is connected.</strong></p>
+                  <p><strong>Loading...</strong></p>
                 </div>
               </div>
               <div class="incident-scan-item" role="listitem">
                 <div>
                   <span class="incident-scan-label">Next review area</span>
-                  <p><strong>Unavailable until backend data is connected.</strong></p>
+                  <p><strong>Loading...</strong></p>
                 </div>
               </div>
             </div>
             <div class="next-action-card" aria-labelledby="next-action-title">
               <span class="next-action-label">Next best action</span>
-              <p id="next-action-title"><strong>Connect the relevant summary endpoint for this persona.</strong></p>
-              <p class="next-action-note">This panel is intentionally written as a shell so live data can replace it without another structural rewrite.</p>
+              <p id="next-action-title"><strong>Loading...</strong></p>
+              <p class="next-action-note">Loading recommendation...</p>
             </div>
             <div class="button-row">
               <button class="button" type="button" data-screen-target="alerts">Open anomaly groups</button>
@@ -207,32 +210,28 @@
           <section class="panel panel-support panel-graph" aria-labelledby="trend-title">
             <div class="panel-header">
               <div>
-                <h3 id="trend-title">Loading chart...</h3>
-                <p class="graph-context">This chart is ready for a live summary endpoint.</p>
+                <h3 id="trend-title">Loading trend...</h3>
+                <p class="graph-context">ATMA hourly error event distribution</p>
               </div>
               <span class="legend">Loading...</span>
             </div>
-            <div class="trend-chart trend-chart-line" role="img" aria-label="Line graph placeholder for a live role-specific summary trend.">
+            <div class="trend-chart trend-chart-line" role="img" aria-label="Line graph showing hourly ATM error event counts.">
               <svg viewBox="0 0 520 240" class="svg-graph svg-graph-large" aria-hidden="true">
                 <line x1="20" y1="200" x2="500" y2="200" class="axis-line" />
                 <line x1="20" y1="150" x2="500" y2="150" class="grid-line" />
                 <line x1="20" y1="100" x2="500" y2="100" class="grid-line" />
                 <line x1="20" y1="50" x2="500" y2="50" class="grid-line" />
-                <path d="M30 184 C70 182, 105 178, 140 170 S205 154, 240 120 S300 54, 340 36 S410 70, 490 148" />
-                <circle cx="340" cy="36" r="8" class="anomaly-point" />
-                <line x1="340" y1="36" x2="340" y2="200" class="anomaly-guide" />
-                <rect x="312" y="8" width="146" height="34" rx="10" class="anomaly-label-box" />
-                <text x="326" y="30" class="anomaly-text">Loading...</text>
+                <path d="M30 195 C70 194, 105 193, 140 192 S205 191, 240 190 S300 189, 340 188 S410 187, 490 186" />
               </svg>
               <div class="chart-axis-labels">
-                <span>08:00</span>
-                <span>09:00</span>
-                <span>Loading...</span>
-                <span>Loading...</span>
+                <span>—</span>
+                <span>—</span>
+                <span>—</span>
+                <span>—</span>
               </div>
-              <p class="chart-caption">Live trend data will render here when the backend endpoint is available.</p>
+              <p class="chart-caption">Loading trend data...</p>
             </div>
-            <div class="mini-graph" role="img" aria-label="Line graph placeholder showing host pressure rising before the final anomaly point.">
+            <div class="mini-graph" role="img" aria-label="WINOS host pressure indicator.">
               <div class="mini-graph-header">
                 <span>WINOS host pressure</span>
                 <strong id="host-pressure-value">Loading...</strong>
@@ -249,27 +248,10 @@
               <h3 id="alerts-summary-title">Source-backed checks</h3>
               <button class="text-button" type="button" data-screen-target="alerts">See all</button>
             </div>
-            <ul class="alert-list">
+            <ul class="alert-list" id="source-checks-list">
               <li>
-                <div>
-                  <strong>KAFK transaction failures</strong>
-                  <p>Unavailable until a live summary endpoint is connected.</p>
-                </div>
-                <span class="status-pill status-critical">Unavailable</span>
-              </li>
-              <li>
-                <div>
-                  <strong>Terminal handler runtime</strong>
-                  <p>Unavailable until a live summary endpoint is connected.</p>
-                </div>
-                <span class="status-pill status-warning">Unavailable</span>
-              </li>
-              <li>
-                <div>
-                  <strong>Windows host health</strong>
-                  <p>Unavailable until a live summary endpoint is connected.</p>
-                </div>
-                <span class="status-pill status-critical">Unavailable</span>
+                <div><strong>Loading checks...</strong><p>Fetching source-backed status from the pipeline.</p></div>
+                <span class="status-pill">Loading</span>
               </li>
             </ul>
           </section>
@@ -286,42 +268,16 @@
                   <th scope="col">Source</th>
                   <th scope="col">Backed metric</th>
                   <th scope="col">Current signal</th>
-                  <th scope="col">Notes</th>
+                  <th scope="col">Record count</th>
                 </tr>
               </thead>
               <tbody id="source-snapshot-tbody">
                 <tr>
-                  <th scope="row">ATMA</th>
-                  <td>Application errors</td>
-                  <td>Loading...</td>
-                  <td>Unavailable until backend data is connected.</td>
-                </tr>
-                <tr>
-                  <th scope="row">ATMH</th>
-                  <td>Hardware state</td>
-                  <td>Loading...</td>
-                  <td>Unavailable until backend data is connected.</td>
-                </tr>
-                <tr>
-                  <th scope="row">KAFK</th>
-                  <td>Transaction flow</td>
-                  <td>Loading...</td>
-                  <td>Unavailable until backend data is connected.</td>
-                </tr>
-                <tr>
-                  <th scope="row">PROM + GCP</th>
-                  <td>Runtime pressure</td>
-                  <td>Loading...</td>
-                  <td>Unavailable until backend data is connected.</td>
-                </tr>
-                <tr>
-                  <th scope="row">WINOS</th>
-                  <td>Host health</td>
-                  <td>Loading...</td>
-                  <td>Unavailable until backend data is connected.</td>
+                  <th scope="row" colspan="4">Loading source data...</th>
                 </tr>
               </tbody>
             </table>
+          <p id="ml-pipeline-note" class="metric-subnote" style="margin-top:0.75rem;"></p>
           </section>
         </div>
       </section>
@@ -330,17 +286,17 @@
         <div class="screen-header">
           <div>
             <p class="eyebrow">ATM detail</p>
-            <h2 id="detail-title">ATM detail view</h2>
-            <p>This page will show the selected ATM once a live detail endpoint is connected.</p>
+            <h2 id="detail-title">Select an ATM to view incident detail</h2>
+            <p>Open an ATM from the ATM list to load source-backed diagnostic data, event timeline, and cross-source evidence.</p>
           </div>
-          <span class="status-pill status-critical">Loading...</span>
+          <span id="detail-status-pill" class="status-pill">—</span>
         </div>
 
         <section class="critical-banner critical-banner-detail" aria-labelledby="detail-banner-title">
           <div>
-            <p class="eyebrow critical-eyebrow">Critical service interruption</p>
-            <h3 id="detail-banner-title">Selected ATM status will appear here</h3>
-            <p>Recommendations will remain unavailable until ATM-level API data is connected.</p>
+            <p class="eyebrow critical-eyebrow">ATM diagnostic summary</p>
+            <h3 id="detail-banner-title">No ATM selected — open from the ATM list</h3>
+            <p id="detail-banner-note">Select an ATM from the list to load source-backed diagnostic data.</p>
           </div>
         </section>
 
@@ -353,29 +309,29 @@
             <dl class="summary-list">
               <div>
                 <dt>Anomaly detected</dt>
-                <dd>Loading...</dd>
+                <dd id="detail-anomaly">—</dd>
               </div>
               <div>
                 <dt>Confidence</dt>
-                <dd>Unavailable</dd>
+                <dd id="detail-confidence">—</dd>
               </div>
               <div>
                 <dt>Current impact</dt>
-                <dd>Unavailable</dd>
+                <dd id="detail-impact">—</dd>
               </div>
               <div>
                 <dt>Likely root cause</dt>
-                <dd>Unavailable</dd>
+                <dd id="detail-root-cause">—</dd>
               </div>
             </dl>
             <div class="recommendation-card">
               <h4>Recommended next step</h4>
-              <p>Recommended action will render here when the ATM detail endpoint is available.</p>
+              <p id="detail-recommended-action">Open an ATM from the ATM list to load recommendations.</p>
             </div>
             <div class="next-action-card next-action-card-detail" aria-labelledby="detail-next-action-title">
               <span class="next-action-label">Next best action</span>
-              <p id="detail-next-action-title"><strong>Loading...</strong></p>
-              <p class="next-action-note">Keep this panel generic until real ATM-level action data is available.</p>
+              <p id="detail-next-action-title"><strong>—</strong></p>
+              <p class="next-action-note" id="detail-next-action-note">Location and last update will appear here.</p>
             </div>
           </section>
 
@@ -384,7 +340,7 @@
               <h3 id="timeline-title">Issue timeline</h3>
               <span class="legend">Newest event first</span>
             </div>
-            <div class="diagnostic-graph" role="img" aria-label="Diagnostic placeholder graph showing latency rising steadily until outage threshold is crossed.">
+            <div class="diagnostic-graph" role="img" aria-label="Anomaly intensity over time.">
               <div class="mini-graph-header">
                 <span>Anomaly intensity vs time</span>
                 <strong>Correlated spike</strong>
@@ -395,52 +351,40 @@
                 <circle cx="348" cy="18" r="5" />
               </svg>
             </div>
-            <ol class="timeline">
+            <ol class="timeline" id="detail-timeline">
               <li>
-                <strong>Loading...</strong>
-                <p>Awaiting live event timeline.</p>
-              </li>
-              <li>
-                <strong>Loading...</strong>
-                <p>Awaiting live event timeline.</p>
-              </li>
-              <li>
-                <strong>Loading...</strong>
-                <p>Awaiting live event timeline.</p>
-              </li>
-              <li>
-                <strong>Loading...</strong>
-                <p>Awaiting live event timeline.</p>
+                <strong>—</strong>
+                <p>Open an ATM from the ATM list to load event timeline.</p>
               </li>
             </ol>
           </section>
 
           <section class="panel" aria-labelledby="evidence-title">
             <h3 id="evidence-title">Evidence and explanation</h3>
-            <div class="evidence-card">
-              <p class="evidence-label">Application source</p>
-              <p>Unavailable until backend data is connected.</p>
+            <div class="evidence-card" id="evidence-app">
+              <p class="evidence-label">Application source (ATMA)</p>
+              <p>Open an ATM to load ATMA application evidence.</p>
             </div>
-            <div class="evidence-card">
-              <p class="evidence-label">Hardware source</p>
-              <p>Unavailable until backend data is connected.</p>
+            <div class="evidence-card" id="evidence-hardware">
+              <p class="evidence-label">Hardware source (ATMH)</p>
+              <p>Open an ATM to load ATMH hardware evidence.</p>
             </div>
-            <div class="evidence-card">
-              <p class="evidence-label">Stream and runtime sources</p>
-              <p>Unavailable until backend data is connected.</p>
+            <div class="evidence-card" id="evidence-stream">
+              <p class="evidence-label">Stream and runtime sources (KAFK, PROM, GCP, TERM)</p>
+              <p>Open an ATM to load stream and runtime evidence.</p>
             </div>
             <p class="explanation-note">
-              The detail view is structured for live data injection rather than static demo values.
+              Evidence is cross-referenced from ATMA, ATMH, KAFK, PROM, GCP, TERM, and WINOS for the selected ATM.
             </p>
           </section>
 
           <section class="panel" aria-labelledby="impact-title">
             <h3 id="impact-title">Service impact and response</h3>
-            <ul class="simple-list">
-              <li><strong>Observed impact:</strong> Loading...</li>
-              <li><strong>Location code:</strong> Unavailable</li>
-              <li><strong>Last event:</strong> Unavailable</li>
-              <li><strong>Correlated signals:</strong> Unavailable</li>
+            <ul class="simple-list" id="detail-impact-list">
+              <li><strong>Observed impact:</strong> <span id="detail-observed-impact">—</span></li>
+              <li><strong>Location code:</strong> <span id="detail-location">—</span></li>
+              <li><strong>Last event:</strong> <span id="detail-last-event">—</span></li>
+              <li><strong>Correlated signals:</strong> <span id="detail-correlated-signals">—</span></li>
             </ul>
             <div class="button-row">
               <button class="button" type="button" data-screen-target="action-center">Take action</button>
@@ -464,11 +408,10 @@
             <h3 id="filters-title">Filters</h3>
           </div>
           <div class="filter-row">
-            <button class="filter-chip is-active" type="button">All</button>
-            <button class="filter-chip" type="button">Critical</button>
-            <button class="filter-chip" type="button">Warning</button>
-            <button class="filter-chip" type="button">Healthy</button>
-            <button class="filter-chip" type="button">Host pressure</button>
+            <button class="filter-chip is-active" type="button" data-filter="all">All</button>
+            <button class="filter-chip" type="button" data-filter="critical">Critical</button>
+            <button class="filter-chip" type="button" data-filter="warning">Warning</button>
+            <button class="filter-chip" type="button" data-filter="ok">Healthy</button>
           </div>
         </section>
 
@@ -491,36 +434,7 @@
             </thead>
             <tbody id="atm-list-tbody">
               <tr>
-                <th scope="row">Loading...</th>
-                <td>Unavailable</td>
-                <td><span class="status-pill status-critical">Loading...</span></td>
-                <td>Unavailable until backend data is connected.</td>
-                <td>Unavailable</td>
-                <td><button class="text-button" type="button" data-screen-target="atm-detail">Open</button></td>
-              </tr>
-              <tr>
-                <th scope="row">Loading...</th>
-                <td>Unavailable</td>
-                <td><span class="status-pill status-critical">Loading...</span></td>
-                <td>Unavailable until backend data is connected.</td>
-                <td>Unavailable</td>
-                <td><button class="text-button" type="button" data-screen-target="alerts">Open</button></td>
-              </tr>
-              <tr>
-                <th scope="row">Loading...</th>
-                <td>Unavailable</td>
-                <td><span class="status-pill status-warning">Loading...</span></td>
-                <td>Unavailable until backend data is connected.</td>
-                <td>Unavailable</td>
-                <td><button class="text-button" type="button">Review</button></td>
-              </tr>
-              <tr>
-                <th scope="row">Loading...</th>
-                <td>Unavailable</td>
-                <td><span class="status-pill status-warning">Loading...</span></td>
-                <td>Unavailable until backend data is connected.</td>
-                <td>Unavailable</td>
-                <td><button class="text-button" type="button">View</button></td>
+                <td colspan="6">Loading ATM data...</td>
               </tr>
             </tbody>
           </table>
@@ -542,9 +456,7 @@
             <details open>
               <summary id="alerts-critical-summary">Loading anomaly groups...</summary>
               <ul id="alerts-critical-list" class="simple-list compact-list">
-                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
-                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
-                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
+                <li>Loading...</li>
               </ul>
             </details>
           </section>
@@ -554,33 +466,93 @@
             <details open>
               <summary id="alerts-warning-summary">Loading anomaly groups...</summary>
               <ul id="alerts-warning-list" class="simple-list compact-list">
-                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
-                <li><strong>Loading...</strong> Unavailable until backend data is connected.</li>
+                <li>Loading...</li>
               </ul>
             </details>
           </section>
         </div>
+
+        <section class="panel" aria-labelledby="incidents-title" style="margin-top:1.5rem;">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Cross-source correlation</p>
+              <h3 id="incidents-title">Correlated incident groups</h3>
+            </div>
+            <span id="incidents-summary-pill" class="status-pill">Loading...</span>
+          </div>
+          <p class="metric-subnote" style="margin-bottom:0.75rem;">Events grouped by shared <code>correlation_id</code> across sources, with time-window fallback (±5 min) for sources without one.</p>
+          <ul id="incidents-list" class="simple-list compact-list">
+            <li>Loading correlated incidents...</li>
+          </ul>
+        </section>
       </section>
 
       <section class="screen" id="settings" aria-labelledby="settings-title">
         <div class="screen-header">
           <div>
             <p class="eyebrow">Settings</p>
-            <h2 id="settings-title">Notification and threshold settings</h2>
-            <p>Wireframe only. This page shows where configuration would live.</p>
+            <h2 id="settings-title">Account and configuration</h2>
+            <p>Review your account details, detection thresholds, and notification preferences.</p>
           </div>
           <form method="post" action="/logout">
             <button class="button" type="submit">Log out</button>
           </form>
         </div>
 
-        <section class="panel settings-wireframe" aria-labelledby="settings-wireframe-title">
-          <h3 id="settings-wireframe-title">Configuration areas</h3>
-          <div class="wireframe-block">Alert thresholds</div>
-          <div class="wireframe-block">Notification channels</div>
-          <div class="wireframe-block">Escalation rules</div>
-          <div class="wireframe-block">User roles and permissions</div>
-        </section>
+        <div class="detail-grid">
+          <section class="panel" aria-labelledby="account-info-title">
+            <h3 id="account-info-title">Account</h3>
+            <dl class="summary-list">
+              <div>
+                <dt>Username</dt>
+                <dd id="settings-username">—</dd>
+              </div>
+              <div>
+                <dt>Role</dt>
+                <dd id="settings-role">—</dd>
+              </div>
+              <div>
+                <dt>Console</dt>
+                <dd id="settings-console">—</dd>
+              </div>
+              <div>
+                <dt>Session</dt>
+                <dd>Active</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="panel" aria-labelledby="thresholds-title">
+            <h3 id="thresholds-title">Detection thresholds</h3>
+            <ul class="simple-list">
+              <li><strong>Network timeout:</strong> 30,000 ms</li>
+              <li><strong>Memory pressure:</strong> &gt; 90% usage</li>
+              <li><strong>CPU threshold:</strong> &gt; 90% usage</li>
+              <li><strong>GC pause threshold:</strong> &gt; 10 s</li>
+              <li><strong>Kafka failure trigger:</strong> failure_count &ge; 1</li>
+              <li><strong>WINOS host pressure:</strong> CPU &gt; 80%</li>
+            </ul>
+            <p class="metric-subnote" style="margin-top: 0.75rem;">Thresholds are configured in <code>src/analysis/config.ini</code> and applied at pipeline runtime.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="source-coverage-title">
+            <h3 id="source-coverage-title">Source coverage</h3>
+            <ul class="simple-list" id="settings-source-list">
+              <li>Loading source status...</li>
+            </ul>
+          </section>
+
+          <section class="panel" aria-labelledby="notification-settings-title">
+            <h3 id="notification-settings-title">Notification channels</h3>
+            <ul class="simple-list">
+              <li><strong>Critical alerts:</strong> Dashboard banner + alert panel</li>
+              <li><strong>Warning alerts:</strong> Alert panel only</li>
+              <li><strong>Escalation path:</strong> Ops → Manager → Admin</li>
+              <li><strong>Data refresh:</strong> On page load</li>
+            </ul>
+            <p class="metric-subnote" style="margin-top: 0.75rem;">Notification routing and escalation configuration is managed at the platform level.</p>
+          </section>
+        </div>
       </section>
 
       <section class="screen" id="action-center" aria-labelledby="action-title">
@@ -588,7 +560,7 @@
           <div>
             <p class="eyebrow">Action</p>
             <h2 id="action-title">Action center</h2>
-            <p>This page is ready for live recommendations once the relevant backend endpoint is connected.</p>
+            <p>Record operational decisions against active anomaly groups and generate an evidence-backed audit trail.</p>
           </div>
         </div>
 
@@ -601,28 +573,28 @@
                 <label class="radio-card">
                   <input type="radio" name="action" checked />
                   <span>
-                    <strong>Loading recommendation</strong>
-                    <small>Unavailable until backend data is connected.</small>
+                    <strong id="action-option-1">Loading recommendation...</strong>
+                    <small id="action-option-1-detail">Fetching active anomaly context.</small>
                   </span>
                 </label>
                 <label class="radio-card">
                   <input type="radio" name="action" />
                   <span>
-                    <strong>Loading recommendation</strong>
-                    <small>Unavailable until backend data is connected.</small>
+                    <strong id="action-option-2">Loading recommendation...</strong>
+                    <small id="action-option-2-detail">Fetching active anomaly context.</small>
                   </span>
                 </label>
                 <label class="radio-card">
                   <input type="radio" name="action" />
                   <span>
-                    <strong>Loading recommendation</strong>
-                    <small>Unavailable until backend data is connected.</small>
+                    <strong id="action-option-3">Loading recommendation...</strong>
+                    <small id="action-option-3-detail">Fetching active anomaly context.</small>
                   </span>
                 </label>
               </fieldset>
               <label class="field">
                 <span>Operator note</span>
-                <textarea rows="4">Waiting for live recommendation context from the backend.</textarea>
+                <textarea rows="4" id="action-textarea" placeholder="Add notes for the selected action..."></textarea>
               </label>
               <button type="button" class="button" id="confirm-action">Confirm action</button>
             </form>
@@ -631,7 +603,7 @@
           <section class="panel" aria-labelledby="confirmation-title">
             <h3 id="confirmation-title">Confirmation</h3>
             <div class="confirmation-card" id="confirmation-card" tabindex="-1" aria-live="polite">
-              <p>No action has been sent yet.</p>
+              <p>No action has been recorded yet.</p>
             </div>
           </section>
         </div>

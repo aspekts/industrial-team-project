@@ -6,6 +6,7 @@ from src.cleaning.data_cleaning import LogCleaner
 from src.cleaning.database import DatabaseHandler
 from src.dashboard.server import create_app
 from src.analysis.detect import Detection
+from src.analysis.correlate import Correlator
 from src.ml.scorer import AnomalyScorer
 
 import time
@@ -32,6 +33,8 @@ def run_pipeline():
     scorer = AnomalyScorer(db_path=CLEANED_DB_PATH)
     scorer.score_and_store_anomalies()
 
+    # Stage 5: Correlate detections into cross-source incidents
+    Correlator(db_path=CLEANED_DB_PATH).store_incidents()
 def run_simulation(interval_min=5):
     try:
         while True:
