@@ -79,11 +79,13 @@ class LogCleaner:
                     if t is type(None):
                         clean_log[field] = None
                         break
-                    
+
                     clean_log[field] = t(target)
                     break
                 except Exception:
                     continue
+            else:
+                clean_log[field] = None
 
         return clean_log
 
