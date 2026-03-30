@@ -1,5 +1,4 @@
 # main.py
-import os
 from src.parsers.ingest import run_ingestion
 from src.cleaning.schemas import LOG_SCHEMAS
 from src.cleaning.data_cleaning import LogCleaner
