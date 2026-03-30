@@ -1,5 +1,4 @@
 # main.py
-import os
 from src.parsers.ingest import run_ingestion
 from src.cleaning.schemas import LOG_SCHEMAS
 from src.cleaning.data_cleaning import LogCleaner
@@ -9,16 +8,20 @@ from src.analysis.detect import Detection
 from src.analysis.correlate import Correlator
 from src.ml.scorer import AnomalyScorer
 
+from configparser import ConfigParser
 import time
+
+config = ConfigParser()
+config.read("config.ini")
 
 def run_pipeline():
     # Stage 1: Ingest raw log files into a structured format
     run_ingestion()
 
     # Stage 2: Clean the ingested data and store it in a SQLite database
-    RAW_DATA_DIR = "data/raw"
-    CLEANED_DB_PATH = "data/clean/atm_logs.db"
-    ERROR_PATH = "data/clean"
+    RAW_DATA_DIR = config.get("PATHS", "raw_data_dir")
+    CLEANED_DB_PATH = config.get("PATHS", "cleaned_db_path")
+    ERROR_PATH = config.get("PATHS", "error_path")
 
     db_handler = DatabaseHandler(db_path=CLEANED_DB_PATH)
     db_handler.setup_database(LOG_SCHEMAS)
@@ -49,6 +52,7 @@ def run_simulation(interval_min=5):
 if __name__ == "__main__":
     run_pipeline()
     app = create_app()
-    port = int(os.environ.get("PORT", 5000))
-    print(f"[INFO] Pipeline complete. Starting dashboard on http://0.0.0.0:{port}")
-    app.run(host="0.0.0.0", port=port, debug=False)
+    host = config.get("NETWORK", "host")
+    port = config.getint("NETWORK", "port")
+    print(f"[INFO] Pipeline complete. Starting dashboard on http://{host}:{port}")
+    app.run(host, port=port, debug=False)
