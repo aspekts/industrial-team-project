@@ -37,6 +37,9 @@ class AnomalyScorer:
         for source in SOURCES:
             # Load and train a fresh detector per source (feature shapes differ)
             features = self.feature_extractor.get_all_features(source)
+            if features.empty:
+                print(f"[INFO] {source}: no features available, skipping.")
+                continue
             detector = AnomalyDetector()
             detector.train(features)
 
