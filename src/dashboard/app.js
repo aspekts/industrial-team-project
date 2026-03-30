@@ -45,8 +45,8 @@ const roleViewConfig = {
   ops: {
     defaultScreen: "dashboard",
     allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "settings", "action-center"],
-    dashboardTitle: "Ops investigation view",
-    dashboardDescription: "Focus on anomaly triage, ATM detail, and action workflows as live signals become available.",
+    dashboardTitle: "Operations",
+    dashboardDescription: "",
     dashboardStatus: "Loading...",
     bannerEyebrow: "Ops focus",
     bannerTitle: "The highest-priority operational signal will appear here.",
@@ -186,7 +186,7 @@ const roleChartContent = {
 const roleScreenContent = {
   admin: {
     headerCopy: "Maintain cross-system visibility across source readiness, governance surfaces, and platform health.",
-    searchPlaceholder: "Search source, service, role access, or exception",
+    searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
       alerts: "Exceptions",
@@ -201,7 +201,7 @@ const roleScreenContent = {
   },
   manager: {
     headerCopy: "Track immediate ATM issues, local operational pressure, and the next items that need action.",
-    searchPlaceholder: "Search ATM, location, queue, or issue",
+    searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
       atmList: "ATM queue",
@@ -220,8 +220,8 @@ const roleScreenContent = {
     settingsDescription: "Review notifications and thresholds that affect local operational oversight.",
   },
   ops: {
-    headerCopy: "Investigate outages, telemetry spikes, and infrastructure health without losing access to ATM-level workflows.",
-    searchPlaceholder: "Search outage, telemetry, ATM, component, or error",
+    headerCopy: "",
+    searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
       atmDetail: "Incident detail",
