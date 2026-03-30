@@ -28,9 +28,8 @@ class DatabaseHandler:
                     columns.append(f"{field} {sql_type}")
 
                 columns_sql = ", ".join(columns)
-                query = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql});"
-                
-                cursor.execute(query)
+                cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
+                cursor.execute(f"CREATE TABLE {table_name} ({columns_sql})")
                 
         print("Database tables are ready!")
 
