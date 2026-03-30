@@ -28,6 +28,25 @@
           <input type="search" placeholder="Search ATM ID, location code, component, or error" />
         </label>
 
+        <section class="date-filter-panel" aria-labelledby="date-filter-title">
+          <div>
+            <p class="eyebrow">Date filter</p>
+            <h2 id="date-filter-title" class="sidebar-panel-title">Dashboard date</h2>
+            <p class="date-filter-copy">Filter dashboard metrics, ATM lists, and anomaly groups to a single day.</p>
+          </div>
+          <form id="date-filter-form" class="date-filter-form">
+            <label class="date-filter-field" for="dashboard-date-filter">
+              <span>Date</span>
+              <input id="dashboard-date-filter" name="dashboard-date-filter" type="date" />
+            </label>
+            <div class="date-filter-actions">
+              <button class="button" type="submit">Apply filter</button>
+              <button class="button-secondary" id="date-filter-clear" type="button">Clear</button>
+            </div>
+            <p id="date-filter-status" class="date-filter-status" aria-live="polite">Showing all available dates.</p>
+          </form>
+        </section>
+
         <section class="accessibility-panel" aria-labelledby="accessibility-title">
           <div>
             <p class="eyebrow">Accessibility</p>

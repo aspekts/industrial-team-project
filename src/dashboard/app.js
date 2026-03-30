@@ -5,6 +5,10 @@ const confirmationCard = document.getElementById("confirmation-card");
 const clickableCards = document.querySelectorAll(".metric-card-action[data-screen-target]");
 const accessibilityToggle = document.getElementById("accessibility-toggle");
 const globalSearchInput = document.querySelector('.search-field input[type="search"]');
+const dateFilterForm = document.getElementById("date-filter-form");
+const dateFilterInput = document.getElementById("dashboard-date-filter");
+const dateFilterClearButton = document.getElementById("date-filter-clear");
+const dateFilterStatus = document.getElementById("date-filter-status");
 const dashboardMetricCards = document.querySelectorAll(".metric-grid .metric-card");
 const anomalyTrendChart = document.querySelector(".trend-chart");
 const hostPressureChart = document.querySelector(".mini-graph");
@@ -248,6 +252,7 @@ const chartState = createChartStateRegistry();
 const activeRoleConfig = roleViewConfig[dashboardRole] || roleViewConfig.ops;
 
 let currentScreenId = "dashboard";
+let activeDateFilter = "";
 const validScreenIds = new Set(activeRoleConfig.allowedScreens);
 
 function setLargeUi(isEnabled) {
@@ -556,6 +561,52 @@ function normalizeSearchValue(value) {
   return value.trim().toLowerCase();
 }
 
+function formatFilterDate(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
+
+  const parsedDate = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateValue;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsedDate);
+}
+
+function setDateFilterStatus(message) {
+  if (dateFilterStatus) {
+    dateFilterStatus.textContent = message;
+  }
+}
+
+function buildApiUrl(path) {
+  const url = new URL(path, window.location.origin);
+  if (activeDateFilter) {
+    url.searchParams.set("date", activeDateFilter);
+  }
+  return url.toString();
+}
+
+function updateDateFilterStatusFromState() {
+  if (activeDateFilter) {
+    setDateFilterStatus(`Filtering all dashboard data to ${formatFilterDate(activeDateFilter)}.`);
+    return;
+  }
+
+  setDateFilterStatus("Showing all available dates.");
+}
+
+function setDashboardLoadingState() {
+  Object.entries(roleCardContent[dashboardRole] || roleCardContent.ops).forEach(([metricKey, payload]) => {
+    setMetricCardState(metricKey, uiStateModes.LOADING, payload);
+  });
+}
+
 function filterAtmRows(query) {
   const atmRows = document.querySelectorAll("#atm-list tbody tr");
   if (!atmRows.length) {
@@ -745,6 +796,24 @@ if (globalSearchInput) {
   });
 }
 
+if (dateFilterForm && dateFilterInput) {
+  dateFilterForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    activeDateFilter = dateFilterInput.value;
+    updateDateFilterStatusFromState();
+    await fetchDashboardData();
+  });
+}
+
+if (dateFilterClearButton && dateFilterInput) {
+  dateFilterClearButton.addEventListener("click", async () => {
+    dateFilterInput.value = "";
+    activeDateFilter = "";
+    updateDateFilterStatusFromState();
+    await fetchDashboardData();
+  });
+}
+
 if (confirmActionButton && confirmationCard) {
   confirmActionButton.addEventListener("click", () => {
     confirmationCard.innerHTML =
@@ -769,13 +838,20 @@ showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : activeRoleCon
 // ─── Data layer ───────────────────────────────────────────────────────────────
 
 async function fetchDashboardData() {
+  setDashboardLoadingState();
+  setDateFilterStatus(
+    activeDateFilter
+      ? `Loading data for ${formatFilterDate(activeDateFilter)}...`
+      : "Loading data for all available dates..."
+  );
+
   try {
     const [summary, scale, snapshot, atmList, alerts] = await Promise.all([
-      fetch("/api/summary").then((r) => r.json()),
-      fetch("/api/scale").then((r) => r.json()),
-      fetch("/api/source-snapshot").then((r) => r.json()),
-      fetch("/api/atm-list").then((r) => r.json()),
-      fetch("/api/alerts").then((r) => r.json()),
+      fetch(buildApiUrl("/api/summary")).then((r) => r.json()),
+      fetch(buildApiUrl("/api/scale")).then((r) => r.json()),
+      fetch(buildApiUrl("/api/source-snapshot")).then((r) => r.json()),
+      fetch(buildApiUrl("/api/atm-list")).then((r) => r.json()),
+      fetch(buildApiUrl("/api/alerts")).then((r) => r.json()),
     ]);
 
     if (summary.status === "ok") populateSummary(summary);
@@ -783,27 +859,30 @@ async function fetchDashboardData() {
     if (snapshot.status === "ok") populateSourceSnapshot(snapshot.sources);
     if (atmList.status === "ok") populateAtmList(atmList.atms);
     if (alerts.status === "ok") populateAlerts(alerts);
+    updateDateFilterStatusFromState();
   } catch (err) {
     console.warn("[dashboard] data fetch failed:", err);
+    setDateFilterStatus("Unable to load dashboard data for the selected date.");
   }
 }
 
 function populateSummary(data) {
+  const filterSuffix = data.filter_date ? ` on ${formatFilterDate(data.filter_date)}` : "";
   setMetricCardState("observedAtms", uiStateModes.READY, {
     value: String(data.observed_atms),
-    note: `${data.app_errors} app error events across ATMA`,
+    note: `${data.app_errors} app error events across ATMA${filterSuffix}`,
   });
   setMetricCardState("atmAppErrors", uiStateModes.READY, {
     value: String(data.app_errors),
-    note: `${data.failure_windows} critical detection groups`,
+    note: `${data.failure_windows} critical detection groups${filterSuffix}`,
   });
   setMetricCardState("hardwareAlerts", uiStateModes.READY, {
     value: String(data.hardware_alerts),
-    note: "ATMH WARNING + CRITICAL events",
+    note: `ATMH WARNING + CRITICAL events${filterSuffix}`,
   });
   setMetricCardState("eventThroughput", uiStateModes.READY, {
     value: String(data.avg_tps),
-    note: "Average transactions per KAFK window",
+    note: `Average transactions per KAFK window${filterSuffix}`,
   });
 
   const pill = document.getElementById("dashboard-status-pill");
@@ -821,7 +900,7 @@ function populateScale(data) {
   };
   setText("scale-sources", String(data.sources));
   setText("scale-atms", String(data.atms));
-  setText("scale-window", data.time_window);
+  setText("scale-window", data.filter_date ? formatFilterDate(data.filter_date) : data.time_window);
   setText("scale-avg-tps", String(data.avg_tps));
 }
 
@@ -845,7 +924,7 @@ function populateAtmList(atms) {
   const tbody = document.getElementById("atm-list-tbody");
   if (!tbody) return;
   if (!atms.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No ATM data available.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="6">${activeDateFilter ? `No ATM data available for ${formatFilterDate(activeDateFilter)}.` : "No ATM data available."}</td></tr>`;
     return;
   }
   tbody.innerHTML = atms
@@ -880,7 +959,7 @@ function populateAlerts(data) {
   const warnList = document.getElementById("alerts-warning-list");
 
   if (critSummary) {
-    critSummary.textContent = `${data.critical.length} critical anomaly group${data.critical.length !== 1 ? "s" : ""}`;
+    critSummary.textContent = `${data.critical.length} critical anomaly group${data.critical.length !== 1 ? "s" : ""}${data.filter_date ? ` for ${formatFilterDate(data.filter_date)}` : ""}`;
   }
   if (critList) {
     critList.innerHTML = data.critical.length
@@ -890,11 +969,11 @@ function populateAlerts(data) {
               `<li><strong>${a.anomaly_name} (${a.anomaly_type})</strong> — ${a.source}${a.atm_id && a.atm_id !== "N/A" ? " / " + a.atm_id : ""}: ${a.description || ""} <em>(${a.event_count} event${a.event_count !== 1 ? "s" : ""})</em></li>`
           )
           .join("")
-      : "<li>No critical anomalies detected.</li>";
+      : `<li>${data.filter_date ? `No critical anomalies detected for ${formatFilterDate(data.filter_date)}.` : "No critical anomalies detected."}</li>`;
   }
 
   if (warnSummary) {
-    warnSummary.textContent = `${data.warning.length} warning anomaly group${data.warning.length !== 1 ? "s" : ""}`;
+    warnSummary.textContent = `${data.warning.length} warning anomaly group${data.warning.length !== 1 ? "s" : ""}${data.filter_date ? ` for ${formatFilterDate(data.filter_date)}` : ""}`;
   }
   if (warnList) {
     warnList.innerHTML = data.warning.length
@@ -904,7 +983,7 @@ function populateAlerts(data) {
               `<li><strong>${a.anomaly_name} (${a.anomaly_type})</strong> — ${a.source}${a.atm_id && a.atm_id !== "N/A" ? " / " + a.atm_id : ""}: ${a.description || ""} <em>(${a.event_count} event${a.event_count !== 1 ? "s" : ""})</em></li>`
           )
           .join("")
-      : "<li>No warning anomalies detected.</li>";
+      : `<li>${data.filter_date ? `No warning anomalies detected for ${formatFilterDate(data.filter_date)}.` : "No warning anomalies detected."}</li>`;
   }
 
   const hostEl = document.getElementById("host-pressure-value");
@@ -914,4 +993,5 @@ function populateAlerts(data) {
   }
 }
 
+updateDateFilterStatusFromState();
 fetchDashboardData();

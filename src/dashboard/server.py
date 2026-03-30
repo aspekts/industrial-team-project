@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import sys
+from datetime import date
 from pathlib import Path
 
 from flask import Flask, jsonify, redirect, render_template, render_template_string, request, session, url_for
@@ -251,8 +252,25 @@ def create_app(db_path: Path | None = None) -> Flask:
         )
         return cur.fetchone() is not None
 
+    def _get_filter_date():
+        raw_value = request.args.get("date", "").strip()
+        if not raw_value:
+            return None
+
+        try:
+            return date.fromisoformat(raw_value).isoformat()
+        except ValueError:
+            return None
+
+    def _invalid_date_response():
+        return jsonify({"status": "invalid", "reason": "date must be in YYYY-MM-DD format"}), 400
+
     @app.get("/api/summary")
     def api_summary():
+        filter_date = _get_filter_date()
+        if request.args.get("date") and not filter_date:
+            return _invalid_date_response()
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "reason": "database not found"})
@@ -265,40 +283,90 @@ def create_app(db_path: Path | None = None) -> Flask:
 
             observed_atms = 0
             if has_atma:
-                row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        "SELECT COUNT(DISTINCT atm_id) FROM ATMA WHERE substr(timestamp, 1, 10) = ?",
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
                 observed_atms = row[0] if row else 0
 
             app_errors = 0
             if has_atma:
-                row = conn.execute(
-                    "SELECT COUNT(*) FROM ATMA WHERE event_type IN ('ERROR','TIMEOUT','NETWORK_DISCONNECT')"
-                ).fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM ATMA
+                        WHERE event_type IN ('ERROR','TIMEOUT','NETWORK_DISCONNECT')
+                          AND substr(timestamp, 1, 10) = ?
+                        """,
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT COUNT(*) FROM ATMA WHERE event_type IN ('ERROR','TIMEOUT','NETWORK_DISCONNECT')"
+                    ).fetchone()
                 app_errors = row[0] if row else 0
 
             hardware_alerts = 0
             if has_atmh:
-                row = conn.execute(
-                    "SELECT COUNT(*) FROM ATMH WHERE severity IN ('CRITICAL','WARNING')"
-                ).fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM ATMH
+                        WHERE severity IN ('CRITICAL','WARNING')
+                          AND substr(timestamp, 1, 10) = ?
+                        """,
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT COUNT(*) FROM ATMH WHERE severity IN ('CRITICAL','WARNING')"
+                    ).fetchone()
                 hardware_alerts = row[0] if row else 0
 
             avg_tps = 0.0
             if has_kafk:
-                row = conn.execute(
-                    "SELECT AVG(CAST(transaction_rate_tps AS REAL)) FROM KAFK"
-                ).fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        """
+                        SELECT AVG(CAST(transaction_rate_tps AS REAL))
+                        FROM KAFK
+                        WHERE substr(timestamp, 1, 10) = ?
+                        """,
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT AVG(CAST(transaction_rate_tps AS REAL)) FROM KAFK"
+                    ).fetchone()
                 avg_tps = round(row[0] or 0, 1)
 
             failure_windows = 0
             if has_detections:
-                row = conn.execute(
-                    "SELECT COUNT(*) FROM analysis_detections WHERE severity = 'CRITICAL'"
-                ).fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM analysis_detections
+                        WHERE severity = 'CRITICAL'
+                          AND substr(detection_timestamp, 1, 10) = ?
+                        """,
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT COUNT(*) FROM analysis_detections WHERE severity = 'CRITICAL'"
+                    ).fetchone()
                 failure_windows = row[0] if row else 0
 
         return jsonify(
             {
                 "status": "ok",
+                "filter_date": filter_date,
                 "observed_atms": observed_atms,
                 "app_errors": app_errors,
                 "hardware_alerts": hardware_alerts,
@@ -309,6 +377,10 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/scale")
     def api_scale():
+        filter_date = _get_filter_date()
+        if request.args.get("date") and not filter_date:
+            return _invalid_date_response()
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable"})
@@ -320,27 +392,50 @@ def create_app(db_path: Path | None = None) -> Flask:
 
             atms = 0
             if "ATMA" in present:
-                row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        "SELECT COUNT(DISTINCT atm_id) FROM ATMA WHERE substr(timestamp, 1, 10) = ?",
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
                 atms = row[0] if row else 0
 
             time_window = "N/A"
             if "KAFK" in present:
-                row = conn.execute(
-                    "SELECT MIN(timestamp), MAX(timestamp) FROM KAFK"
-                ).fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        "SELECT MIN(timestamp), MAX(timestamp) FROM KAFK WHERE substr(timestamp, 1, 10) = ?",
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT MIN(timestamp), MAX(timestamp) FROM KAFK"
+                    ).fetchone()
                 if row and row[0] and row[1]:
                     time_window = f"{row[0][:10]} \u2013 {row[1][:10]}"
 
             avg_tps = 0.0
             if "KAFK" in present:
-                row = conn.execute(
-                    "SELECT AVG(CAST(transaction_rate_tps AS REAL)) FROM KAFK"
-                ).fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        """
+                        SELECT AVG(CAST(transaction_rate_tps AS REAL))
+                        FROM KAFK
+                        WHERE substr(timestamp, 1, 10) = ?
+                        """,
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT AVG(CAST(transaction_rate_tps AS REAL)) FROM KAFK"
+                    ).fetchone()
                 avg_tps = round(row[0] or 0, 1)
 
         return jsonify(
             {
                 "status": "ok",
+                "filter_date": filter_date,
                 "sources": sources,
                 "atms": atms,
                 "time_window": time_window,
@@ -350,6 +445,10 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/source-snapshot")
     def api_source_snapshot():
+        filter_date = _get_filter_date()
+        if request.args.get("date") and not filter_date:
+            return _invalid_date_response()
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "sources": []})
@@ -362,7 +461,13 @@ def create_app(db_path: Path | None = None) -> Flask:
                     results.append({"source": name, "signal": "absent", "status": "No data"})
                     continue
 
-                row = conn.execute(f"SELECT COUNT(*) FROM [{name}]").fetchone()
+                if filter_date:
+                    row = conn.execute(
+                        f"SELECT COUNT(*) FROM [{name}] WHERE substr(timestamp, 1, 10) = ?",
+                        (filter_date,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(f"SELECT COUNT(*) FROM [{name}]").fetchone()
                 count = row[0] if row else 0
 
                 if count == 0:
@@ -372,10 +477,14 @@ def create_app(db_path: Path | None = None) -> Flask:
 
                 results.append({"source": name, "signal": signal, "status": status})
 
-        return jsonify({"status": "ok", "sources": results})
+        return jsonify({"status": "ok", "filter_date": filter_date, "sources": results})
 
     @app.get("/api/atm-list")
     def api_atm_list():
+        filter_date = _get_filter_date()
+        if request.args.get("date") and not filter_date:
+            return _invalid_date_response()
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "atms": []})
@@ -387,23 +496,45 @@ def create_app(db_path: Path | None = None) -> Flask:
             if not has_atma:
                 return jsonify({"status": "ok", "atms": []})
 
-            rows = conn.execute(
-                """
-                SELECT atm_id, location_code, MAX(timestamp) AS last_update
-                FROM ATMA
-                GROUP BY atm_id, location_code
-                """
-            ).fetchall()
+            if filter_date:
+                rows = conn.execute(
+                    """
+                    SELECT atm_id, location_code, MAX(timestamp) AS last_update
+                    FROM ATMA
+                    WHERE substr(timestamp, 1, 10) = ?
+                    GROUP BY atm_id, location_code
+                    """,
+                    (filter_date,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT atm_id, location_code, MAX(timestamp) AS last_update
+                    FROM ATMA
+                    GROUP BY atm_id, location_code
+                    """
+                ).fetchall()
 
             atm_issues = {}
             if has_detections:
-                det_rows = conn.execute(
-                    """
-                    SELECT atm_id, severity, anomaly_name
-                    FROM analysis_detections
-                    ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
-                    """
-                ).fetchall()
+                if filter_date:
+                    det_rows = conn.execute(
+                        """
+                        SELECT atm_id, severity, anomaly_name
+                        FROM analysis_detections
+                        WHERE substr(detection_timestamp, 1, 10) = ?
+                        ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
+                        """,
+                        (filter_date,),
+                    ).fetchall()
+                else:
+                    det_rows = conn.execute(
+                        """
+                        SELECT atm_id, severity, anomaly_name
+                        FROM analysis_detections
+                        ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
+                        """
+                    ).fetchall()
                 for atm_id, severity, name in det_rows:
                     if atm_id and atm_id not in atm_issues:
                         atm_issues[atm_id] = (severity, name)
@@ -433,10 +564,14 @@ def create_app(db_path: Path | None = None) -> Flask:
                 )
             )
 
-        return jsonify({"status": "ok", "atms": atms})
+        return jsonify({"status": "ok", "filter_date": filter_date, "atms": atms})
 
     @app.get("/api/alerts")
     def api_alerts():
+        filter_date = _get_filter_date()
+        if request.args.get("date") and not filter_date:
+            return _invalid_date_response()
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "critical": [], "warning": []})
@@ -445,14 +580,26 @@ def create_app(db_path: Path | None = None) -> Flask:
             if not _table_exists(conn, "analysis_detections"):
                 return jsonify({"status": "ok", "critical": [], "warning": []})
 
-            rows = conn.execute(
-                """
-                SELECT anomaly_type, anomaly_name, severity, source, atm_id,
-                       detection_timestamp, description, event_count
-                FROM analysis_detections
-                ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
-                """
-            ).fetchall()
+            if filter_date:
+                rows = conn.execute(
+                    """
+                    SELECT anomaly_type, anomaly_name, severity, source, atm_id,
+                           detection_timestamp, description, event_count
+                    FROM analysis_detections
+                    WHERE substr(detection_timestamp, 1, 10) = ?
+                    ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
+                    """,
+                    (filter_date,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT anomaly_type, anomaly_name, severity, source, atm_id,
+                           detection_timestamp, description, event_count
+                    FROM analysis_detections
+                    ORDER BY CASE WHEN severity = 'CRITICAL' THEN 0 ELSE 1 END, detected_at DESC
+                    """
+                ).fetchall()
 
         critical = []
         warning = []
@@ -472,7 +619,7 @@ def create_app(db_path: Path | None = None) -> Flask:
             else:
                 warning.append(entry)
 
-        return jsonify({"status": "ok", "critical": critical, "warning": warning})
+        return jsonify({"status": "ok", "filter_date": filter_date, "critical": critical, "warning": warning})
 
     return app
 
