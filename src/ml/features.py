@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import pandas as pd
 
@@ -71,8 +72,8 @@ class FeatureExtractor:
 
         # Fill null values with 0 and record the count of nulls for documentation
         null_counts = df_all.isnull().sum()
-        # Log null_counts to a file or monitoring system for documentation
         log_path = f"data/logs/null_counts_{source}.log"
+        os.makedirs("data/logs", exist_ok=True)
         with open(log_path, 'w') as f:
             f.write("Null value counts per feature:\n")
             f.write(str(null_counts))
