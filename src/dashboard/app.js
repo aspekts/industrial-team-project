@@ -46,8 +46,8 @@ const roleViewConfig = {
   ops: {
     defaultScreen: "dashboard",
     allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "settings", "action-center"],
-    dashboardTitle: "Ops investigation view",
-    dashboardDescription: "Triage active anomalies, review ATM-level evidence, and take action on the highest-priority incidents.",
+    dashboardTitle: "Operations",
+    dashboardDescription: "",
     dashboardStatus: "Loading...",
     bannerEyebrow: "Ops focus",
     bannerTitle: "Highest-priority operational signal will appear here.",
