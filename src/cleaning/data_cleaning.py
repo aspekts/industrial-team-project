@@ -3,13 +3,14 @@ import json
 import os
 
 from src.cleaning.schemas import LOG_SCHEMAS
-from src.cleaning.schemas import LogFilter
+from src.cleaning.filtering import LogFilter
 
 class LogCleaner:
     def __init__(self, db_handler, input_dir, error_dir):
         self.input_dir = input_dir
         self.db_handler = db_handler
         self.filter = LogFilter()
+        self.error_dir = error_dir
 
     def find_schema(self, raw_line):
         """Returns the schema name if keys match exactly."""
