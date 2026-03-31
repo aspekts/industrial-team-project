@@ -5,6 +5,10 @@ const confirmationCard = document.getElementById("confirmation-card");
 const clickableCards = document.querySelectorAll(".metric-card-action[data-screen-target]");
 const accessibilityToggle = document.getElementById("accessibility-toggle");
 const globalSearchInput = document.querySelector('.search-field input[type="search"]');
+const dateFilterForm = document.getElementById("date-filter-form");
+const dateFilterInput = document.getElementById("dashboard-date-filter");
+const dateFilterClearButton = document.getElementById("date-filter-clear");
+const dateFilterStatus = document.getElementById("date-filter-status");
 const dashboardMetricCards = document.querySelectorAll(".metric-grid .metric-card");
 const anomalyTrendChart = document.querySelector(".panel-graph");
 const hostPressureChart = document.querySelector(".mini-graph");
@@ -21,7 +25,7 @@ const uiStateModes = {
 const roleViewConfig = {
   admin: {
     defaultScreen: "dashboard",
-    allowedScreens: ["dashboard", "alerts", "settings"],
+    allowedScreens: ["dashboard", "atm-list", "alerts", "settings"],
     dashboardTitle: "Admin platform view",
     dashboardDescription: "Review source readiness, access model, and platform health across all pipeline components.",
     dashboardStatus: "Platform",
@@ -42,8 +46,8 @@ const roleViewConfig = {
   ops: {
     defaultScreen: "dashboard",
     allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "settings", "action-center"],
-    dashboardTitle: "Ops investigation view",
-    dashboardDescription: "Triage active anomalies, review ATM-level evidence, and take action on the highest-priority incidents.",
+    dashboardTitle: "Operations",
+    dashboardDescription: "",
     dashboardStatus: "Loading...",
     bannerEyebrow: "Ops focus",
     bannerTitle: "Highest-priority operational signal will appear here.",
@@ -186,12 +190,17 @@ const roleChartContent = {
 const roleScreenContent = {
   admin: {
     headerCopy: "Maintain cross-system visibility across source readiness, governance surfaces, and platform health.",
-    searchPlaceholder: "Search source, service, role access, or exception",
+    searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
+      atmList: "ATM fleet",
       alerts: "Exceptions",
       settings: "Settings",
     },
+    listTitle: "Full ATM fleet",
+    listDescription: "Platform-wide view of all monitored ATMs, their current status, and active anomaly counts.",
+    filtersTitle: "Fleet filters",
+    tableTitle: "ATM fleet overview",
     alertsTitle: "Cross-system exception groups",
     alertsDescription: "Review platform-wide exceptions, policy-impacting issues, and source-level concerns that need administrative visibility.",
     criticalGroupTitle: "Platform exceptions",
@@ -201,7 +210,7 @@ const roleScreenContent = {
   },
   manager: {
     headerCopy: "Track immediate ATM issues, local operational pressure, and the next items that need action.",
-    searchPlaceholder: "Search ATM, location, queue, or issue",
+    searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
       atmList: "ATM queue",
@@ -220,15 +229,14 @@ const roleScreenContent = {
     settingsDescription: "Review account details, detection thresholds, and source coverage.",
   },
   ops: {
-    headerCopy: "Investigate outages, telemetry spikes, and infrastructure health without losing access to ATM-level workflows.",
-    searchPlaceholder: "Search outage, telemetry, ATM, component, or error",
+    headerCopy: "",
+    searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
-      atmDetail: "Incident detail",
       atmList: "ATM list",
       alerts: "Incidents",
-      settings: "Settings",
       actionCenter: "Action center",
+      settings: "Settings",
     },
     detailTitle: "Technical incident detail",
     detailDescription: "Use this page for ATM-level evidence, failure sequence review, and system troubleshooting context.",
@@ -252,22 +260,22 @@ const roleScreenContent = {
 // null = card is shown as a read-only metric (no navigation).
 const roleCardTargets = {
   admin: [
-    { target: "settings",  hint: "Review source configuration" },
+    { target: "atm-list",  hint: "View ATM fleet" },
     { target: "alerts",    hint: "Review policy exceptions" },
-    { target: null,         hint: "" },
-    { target: null,         hint: "" },
+    { target: "alerts",    hint: "Review hardware exceptions" },
+    { target: "settings",  hint: "Review platform configuration" },
   ],
   manager: [
     { target: "atm-list",  hint: "View ATM queue" },
     { target: "alerts",    hint: "Review anomaly groups" },
-    { target: null,         hint: "" },
+    { target: "alerts",    hint: "Review queue pressure" },
     { target: "settings",  hint: "Review thresholds" },
   ],
   ops: [
-    { target: "atm-list",   hint: "View ATM list" },
-    { target: "alerts",     hint: "Review incidents" },
-    { target: "atm-detail", hint: "Open incident detail" },
-    { target: "settings",   hint: "Review configuration" },
+    { target: "atm-list",      hint: "View ATM list" },
+    { target: "alerts",        hint: "Review incidents" },
+    { target: "action-center", hint: "Take action" },
+    { target: "settings",      hint: "Review configuration" },
   ],
 };
 
@@ -276,6 +284,7 @@ const chartState = createChartStateRegistry();
 const activeRoleConfig = roleViewConfig[dashboardRole] || roleViewConfig.ops;
 
 let currentScreenId = "dashboard";
+let activeDateFilter = "";
 const validScreenIds = new Set(activeRoleConfig.allowedScreens);
 let currentAtmId = null;
 let currentPrioritySummary = null;
@@ -429,7 +438,10 @@ function setMetricCardState(metricKey, mode, payload = {}) {
   }
 
   if (state.hintNode) {
-    if (mode === uiStateModes.LOADING) {
+    const isClickable = state.card.classList.contains("metric-card-action");
+    if (!isClickable) {
+      state.hintNode.textContent = "";
+    } else if (mode === uiStateModes.LOADING) {
       state.hintNode.textContent = payload.loadingHint ?? "";
     } else if (mode === uiStateModes.UNAVAILABLE) {
       state.hintNode.textContent = payload.unavailableHint ?? "";
@@ -565,11 +577,10 @@ function applyRoleDashboardCopy() {
 
   const navLabelMap = {
     dashboard: document.querySelector('[data-screen-target="dashboard"] span'),
-    atmDetail: document.querySelector('[data-screen-target="atm-detail"] span'),
     atmList: document.querySelector('[data-screen-target="atm-list"] span'),
     alerts: document.querySelector('[data-screen-target="alerts"] span'),
-    settings: document.querySelector('[data-screen-target="settings"] span'),
     actionCenter: document.querySelector('[data-screen-target="action-center"] span'),
+    settings: document.querySelector('[data-screen-target="settings"] span'),
   };
 
   Object.entries(screenContent.navLabels).forEach(([key, value]) => {
@@ -604,6 +615,52 @@ function configureMetricCardTargets() {
 
 function normalizeSearchValue(value) {
   return value.trim().toLowerCase();
+}
+
+function formatFilterDate(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
+
+  const parsedDate = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateValue;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsedDate);
+}
+
+function setDateFilterStatus(message) {
+  if (dateFilterStatus) {
+    dateFilterStatus.textContent = message;
+  }
+}
+
+function buildApiUrl(path) {
+  const url = new URL(path, window.location.origin);
+  if (activeDateFilter) {
+    url.searchParams.set("date", activeDateFilter);
+  }
+  return url.toString();
+}
+
+function updateDateFilterStatusFromState() {
+  if (activeDateFilter) {
+    setDateFilterStatus(`Filtering all dashboard data to ${formatFilterDate(activeDateFilter)}.`);
+    return;
+  }
+
+  setDateFilterStatus("Showing all available dates.");
+}
+
+function setDashboardLoadingState() {
+  Object.entries(roleCardContent[dashboardRole] || roleCardContent.ops).forEach(([metricKey, payload]) => {
+    setMetricCardState(metricKey, uiStateModes.LOADING, payload);
+  });
 }
 
 function filterAtmRows(query) {
@@ -864,6 +921,13 @@ showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : activeRoleCon
 // ─── Data layer ───────────────────────────────────────────────────────────────
 
 async function fetchDashboardData() {
+  setDashboardLoadingState();
+  setDateFilterStatus(
+    activeDateFilter
+      ? `Loading data for ${formatFilterDate(activeDateFilter)}...`
+      : "Loading data for all available dates..."
+  );
+
   try {
     const [summary, scale, snapshot, atmList, alerts, trend, sourceChecks, prioritySummary, winosTrend, mlSummary, incidents] =
       await Promise.all([
@@ -901,6 +965,7 @@ async function fetchDashboardData() {
     populateSettingsAccount();
   } catch (err) {
     console.warn("[dashboard] data fetch failed:", err);
+    setDateFilterStatus("Unable to load dashboard data for the selected date.");
   }
 }
 
@@ -959,7 +1024,7 @@ function populateScale(data) {
   };
   setText("scale-sources", String(data.sources));
   setText("scale-atms", String(data.atms));
-  setText("scale-window", data.time_window);
+  setText("scale-window", data.filter_date ? formatFilterDate(data.filter_date) : data.time_window);
   setText("scale-avg-tps", String(data.avg_tps));
 }
 
@@ -994,7 +1059,7 @@ function populateAtmList(atms) {
   const tbody = document.getElementById("atm-list-tbody");
   if (!tbody) return;
   if (!atms.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No ATM data available.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="6">${activeDateFilter ? `No ATM data available for ${formatFilterDate(activeDateFilter)}.` : "No ATM data available."}</td></tr>`;
     return;
   }
   tbody.innerHTML = atms
@@ -1035,7 +1100,7 @@ function populateAlerts(data) {
   const warnList = document.getElementById("alerts-warning-list");
 
   if (critSummary) {
-    critSummary.textContent = `${data.critical.length} critical anomaly group${data.critical.length !== 1 ? "s" : ""}`;
+    critSummary.textContent = `${data.critical.length} critical anomaly group${data.critical.length !== 1 ? "s" : ""}${data.filter_date ? ` for ${formatFilterDate(data.filter_date)}` : ""}`;
   }
   if (critList) {
     critList.innerHTML = data.critical.length
@@ -1045,11 +1110,11 @@ function populateAlerts(data) {
               `<li><strong>${a.anomaly_name} (${a.anomaly_type})</strong> — ${a.source}${a.atm_id && a.atm_id !== "N/A" ? " / " + a.atm_id : ""}: ${a.description || ""} <em>(${a.event_count} event${a.event_count !== 1 ? "s" : ""})</em></li>`
           )
           .join("")
-      : "<li>No critical anomalies detected.</li>";
+      : `<li>${data.filter_date ? `No critical anomalies detected for ${formatFilterDate(data.filter_date)}.` : "No critical anomalies detected."}</li>`;
   }
 
   if (warnSummary) {
-    warnSummary.textContent = `${data.warning.length} warning anomaly group${data.warning.length !== 1 ? "s" : ""}`;
+    warnSummary.textContent = `${data.warning.length} warning anomaly group${data.warning.length !== 1 ? "s" : ""}${data.filter_date ? ` for ${formatFilterDate(data.filter_date)}` : ""}`;
   }
   if (warnList) {
     warnList.innerHTML = data.warning.length
@@ -1059,7 +1124,7 @@ function populateAlerts(data) {
               `<li><strong>${a.anomaly_name} (${a.anomaly_type})</strong> — ${a.source}${a.atm_id && a.atm_id !== "N/A" ? " / " + a.atm_id : ""}: ${a.description || ""} <em>(${a.event_count} event${a.event_count !== 1 ? "s" : ""})</em></li>`
           )
           .join("")
-      : "<li>No warning anomalies detected.</li>";
+      : `<li>${data.filter_date ? `No warning anomalies detected for ${formatFilterDate(data.filter_date)}.` : "No warning anomalies detected."}</li>`;
   }
 
   const hostEl = document.getElementById("host-pressure-value");

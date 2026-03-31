@@ -24,9 +24,28 @@
         </div>
 
         <label class="search-field sidebar-search">
-          <span class="sr-only">Search ATM ID, location code, component, or error</span>
-          <input type="search" placeholder="Search ATM ID, location code, component, or error" />
+          <span class="sr-only">Search</span>
+          <input type="search" placeholder="Search" />
         </label>
+
+        <section class="date-filter-panel" aria-labelledby="date-filter-title">
+          <div>
+            <p class="eyebrow">Date filter</p>
+            <h2 id="date-filter-title" class="sidebar-panel-title">Dashboard date</h2>
+            <p class="date-filter-copy">Filter dashboard metrics, ATM lists, and anomaly groups to a single day.</p>
+          </div>
+          <form id="date-filter-form" class="date-filter-form">
+            <label class="date-filter-field" for="dashboard-date-filter">
+              <span>Date</span>
+              <input id="dashboard-date-filter" name="dashboard-date-filter" type="date" />
+            </label>
+            <div class="date-filter-actions">
+              <button class="button" type="submit">Apply filter</button>
+              <button class="button-secondary" id="date-filter-clear" type="button">Clear</button>
+            </div>
+            <p id="date-filter-status" class="date-filter-status" aria-live="polite">Showing all available dates.</p>
+          </form>
+        </section>
 
         <section class="accessibility-panel" aria-labelledby="accessibility-title">
           <div>
@@ -73,14 +92,14 @@
           <button class="nav-link is-active" type="button" data-screen-target="dashboard" aria-current="page">
             <span>Dashboard</span>
           </button>
-          <button class="nav-link" type="button" data-screen-target="atm-detail">
-            <span>ATM detail</span>
-          </button>
           <button class="nav-link" type="button" data-screen-target="atm-list">
             <span>ATM list</span>
           </button>
           <button class="nav-link nav-link-alert" type="button" data-screen-target="alerts">
             <span>Alerts</span>
+          </button>
+          <button class="nav-link nav-link-action" type="button" data-screen-target="action-center">
+            <span>Action center</span>
           </button>
           <button class="nav-link" type="button" data-screen-target="settings">
             <span>Settings</span>
@@ -141,24 +160,6 @@
             <p class="metric-subnote">KAFK transaction_rate_tps rolling average</p>
             <p class="metric-link-hint">Inspect data flow</p>
           </article>
-        </div>
-
-        <div class="info-grid">
-          <section class="info-card" aria-labelledby="freshness-title">
-            <p class="eyebrow">Scope rule</p>
-            <h3 id="freshness-title">Schema before surface area</h3>
-            <p class="metric-subnote">The dashboard only exposes fields that can be traced to the current synthetic schema. Unsupported dimensions such as regions or SLA posture do not appear.</p>
-          </section>
-          <section class="info-card" aria-labelledby="ownership-title">
-            <p class="eyebrow">Design rule</p>
-            <h3 id="ownership-title">Cross-source correlation is the product</h3>
-            <p class="metric-subnote">Useful signals come from linking ATM app errors, hardware faults, Kafka failures, terminal-handler exceptions, runtime pressure, and host metrics into one narrative.</p>
-          </section>
-          <section class="info-card" aria-labelledby="summary-title">
-            <p class="eyebrow">Product rule</p>
-            <h3 id="summary-title">Evidence over speculation</h3>
-            <p class="metric-subnote">Every alert group shown here is backed by source records. Region tracking, SLA coverage, and team-routing have been excluded until those dimensions exist in the pipeline.</p>
-          </section>
         </div>
 
         <div class="dashboard-grid">

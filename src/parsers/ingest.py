@@ -1,7 +1,7 @@
 import os
 import csv
 import json
-import datetime
+from datetime import datetime
 
 # ──────────────────────────────────────────────────────────────────────────────
 # File paths - change these to point to where your source files are
@@ -47,6 +47,7 @@ def isFileEmpty(filepath):
                 return False
     except OSError:
         return True
+    return False
 
 
 def isValidTimestamp(value, rowNumber, filename):
@@ -59,7 +60,7 @@ def isValidTimestamp(value, rowNumber, filename):
     try:
         # strip the trailing Z if present and try to parse it
         clean = str(value).replace("Z", "").replace(".000", "")
-        datetime.datetime.strptime(clean[:19], "%Y-%m-%dT%H:%M:%S")
+        datetime.strptime(clean[:19], "%Y-%m-%dT%H:%M:%S")
         return True
     except ValueError:
         print("  WARNING: row " + str(rowNumber) + " in " + filename + " has a bad timestamp: " + str(value))
@@ -97,7 +98,7 @@ def loadATMAppLog():
         writer.writerow(["timestamp","log_level","atm_id","location_code","session_id",
                     "correlation_id","transaction_id","event_type","message","component",
                     "thread_id","response_time_ms","error_code","error_detail","atm_status",
-                    "os_version","app_version", "_anomaly"
+                    "os_version","app_version","_anomaly"
         ])
 
         # required fields per schema (non-nullable fields only)
@@ -136,7 +137,7 @@ def loadATMAppLog():
                 rec.get("atm_status",""),
                 rec.get("os_version",""),
                 rec.get("app_version",""),
-                rec.get("_anomaly", "")
+                None
             ])
             count += 1
 
@@ -161,7 +162,7 @@ def loadATMHardwareLog():
         # write header row
         writer.writerow(["timestamp","atm_id","correlation_id","component","event_type",
                     "severity","message","metric_name","metric_value","metric_unit",
-                    "threshold_value","firmware_version", "_anomaly"
+                    "threshold_value","firmware_version","_anomaly"
         ])
 
         # required fields per schema
@@ -194,7 +195,7 @@ def loadATMHardwareLog():
                 rec.get("metric_unit",""),
                 rec.get("threshold_value",""),
                 rec.get("firmware_version",""),
-                rec.get("_anomaly", "")
+                None
             ])
             count += 1
 
@@ -220,7 +221,7 @@ def loadTerminalHandlerLog():
         writer.writerow(["timestamp","log_level","service_name","service_version","container_id",
                     "pod_name","correlation_id","transaction_id","atm_id","event_type",
                     "message","logger_name","thread_name","response_time_ms","http_status_code",
-                    "exception_class","exception_message","db_query_time_ms","environment", "_anomaly"
+                    "exception_class","exception_message","db_query_time_ms","environment","_anomaly"
         ])
 
         # required fields per schema
@@ -261,7 +262,7 @@ def loadTerminalHandlerLog():
                 rec.get("exception_message",""),
                 rec.get("db_query_time_ms",""),
                 rec.get("environment",""),
-                rec.get("_anomaly", "")
+                None
             ])
             count += 1
 
@@ -289,7 +290,7 @@ def loadKafkaStream():
                         "transaction_rate_tps","response_time_ms","transaction_volume",
                         "transaction_success_rate","transaction_failure_reason",
                         "failure_count","window_duration_seconds","kafka_partition",
-                        "kafka_offset", "_anomaly"
+                        "kafka_offset","_anomaly"
         ])
 
         # required fields per schema
@@ -327,7 +328,7 @@ def loadKafkaStream():
                     rec.get("window_duration_seconds",""),
                     rec.get("kafka_partition",""),
                     rec.get("kafka_offset",""),
-                    rec.get("_anomaly", "")
+                    None
             ])
             count += 1
 
@@ -354,7 +355,7 @@ def loadPrometheusMetrics():
             writer.writerow([
                 "timestamp","metric_name","metric_type","metric_value",
                 "service_name","pod_name","container_id","label_area",
-                "label_env","help_text", "_anomaly"
+                "label_env","help_text","_anomaly"
             ])
 
             # required fields per schema
@@ -385,7 +386,7 @@ def loadPrometheusMetrics():
                     row.get("label_area",""),
                     row.get("label_env",""),
                     row.get("help_text",""),
-                    row.get("_anomaly", "")
+                    None
                 ])
                 count += 1
 
@@ -414,7 +415,7 @@ def loadWindowsMetrics():
                 "disk_read_bytes_per_sec","disk_write_bytes_per_sec","disk_free_gb",
                 "network_bytes_sent_per_sec","network_bytes_recv_per_sec",
                 "network_errors","process_count","system_uptime_seconds",
-                "event_log_errors_last_min", "_anomaly"
+                "event_log_errors_last_min","_anomaly"
             ])
 
             # required fields per schema
@@ -453,7 +454,7 @@ def loadWindowsMetrics():
                     row.get("process_count",""),
                     row.get("system_uptime_seconds",""),
                     row.get("event_log_errors_last_min",""),
-                    row.get("_anomaly", "")
+                    None
                 ])
                 count += 1
 
@@ -481,7 +482,7 @@ def loadGCPMetrics():
                 "metric_name","metric_value","metric_unit","cpu_usage_percent",
                 "memory_usage_bytes","memory_limit_bytes","network_ingress_bytes",
                 "network_egress_bytes","restart_count","label_app","label_env",
-                "label_version", "_anomaly"
+                "label_version","_anomaly"
             ])
 
             # required fields per schema
@@ -520,7 +521,7 @@ def loadGCPMetrics():
                     row.get("label_app",""),
                     row.get("label_env",""),
                     row.get("label_version",""),
-                    row.get("_anomaly", "")
+                    None
                 ])
                 count += 1
 
@@ -545,14 +546,11 @@ def checkRowCounts():
 
     for fname in files:
         path   = OutputFolder + "/" + fname
-        if os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as InFile:
-                Lines = InFile.readlines()
-            # subtract 1 to exclude the header row from the count
-            count = len(Lines) - 1
-            print("  " + fname + ": " + str(count) + " rows")
-        else:
-            print(f"Path to {path} doesn't exist.")
+        with open(path, 'r', encoding='utf-8') as InFile:
+            Lines = InFile.readlines()
+        # subtract 1 to exclude the header row from the count
+        count = len(Lines) - 1
+        print("  " + fname + ": " + str(count) + " rows")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
