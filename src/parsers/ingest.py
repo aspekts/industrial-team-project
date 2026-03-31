@@ -2,18 +2,21 @@ import os
 import csv
 import json
 import datetime
+
 # ──────────────────────────────────────────────────────────────────────────────
 # File paths - change these to point to where your source files are
 # ──────────────────────────────────────────────────────────────────────────────
+
 BASE_PATH = "data/synthetic"
 
 FILE_ATM_APP_LOG        = f"{BASE_PATH}/atm_application_log.json"
 FILE_ATM_HW_LOG         = f"{BASE_PATH}/atm_hardware_sensor_log.json"
-FILE_GCP_METRICS        = f"{BASE_PATH}/gcp_cloud_metrics.csv"
+FILE_TERMINAL_LOG       = f"{BASE_PATH}/terminal_handler_app_log.json"
+FILE_KAFKA_STREAM       = f"{BASE_PATH}/kafka_atm_metrics_stream.json"
 FILE_PROMETHEUS_METRICS = f"{BASE_PATH}/prometheus_metrics.csv"
 FILE_WINDOWS_METRICS    = f"{BASE_PATH}/windows_os_metrics.csv"
-FILE_KAFKA_STREAM       = f"{BASE_PATH}/kafka_atm_metrics_stream.json"
-FILE_TERMINAL_LOG       = f"{BASE_PATH}/terminal_handler_app_log.json"
+FILE_GCP_METRICS        = f"{BASE_PATH}/gcp_cloud_metrics.csv"
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Output folder - all text files will be written here
@@ -25,26 +28,25 @@ error_path   = "data/clean/broken_logs.json"
 try:
     os.mkdir(OutputFolder)
     os.makedirs(os.path.dirname(error_path), exist_ok=True)
-except:
+except OSError:
     print("Output folder already exists, continuing...")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Load each source file and write it out as a CSV-style text file
+# Malformed input handling
 # ──────────────────────────────────────────────────────────────────────────────
 
 def isFileEmpty(filepath):
     # returns True if the file has no content or only whitespace
-    try: 
+    try:
         with open(filepath, "r", encoding='utf-8') as InFile:
             lines = InFile.read().strip()
             if not lines:
                 return True
             else:
                 return False
-    except:
+    except OSError:
         return True
-
 
 
 def isValidTimestamp(value, rowNumber, filename):
@@ -59,7 +61,7 @@ def isValidTimestamp(value, rowNumber, filename):
         clean = str(value).replace("Z", "").replace(".000", "")
         datetime.datetime.strptime(clean[:19], "%Y-%m-%dT%H:%M:%S")
         return True
-    except:
+    except ValueError:
         print("  WARNING: row " + str(rowNumber) + " in " + filename + " has a bad timestamp: " + str(value))
         return False
 
@@ -98,10 +100,23 @@ def loadATMAppLog():
                     "os_version","app_version", "_anomaly"
         ])
 
-        count = 0
+        # required fields per schema (non-nullable fields only)
+        requiredFields = ["timestamp", "log_level", "atm_id", "location_code",
+                        "event_type", "message", "component", "atm_status", "app_version"]
+
+        count        = 0
+        skippedCount = 0
 
         for rec in records:
-            rowNumber = count + 1
+            rowNumber = count + skippedCount + 1
+
+            if not checkRequiredFields(rec, requiredFields, rowNumber, FILE_ATM_APP_LOG):
+                skippedCount += 1
+                continue
+
+            if not isValidTimestamp(rec.get("timestamp", ""), rowNumber, FILE_ATM_APP_LOG):
+                skippedCount += 1
+                continue
 
             writer.writerow([
                 rec.get("timestamp",""),
@@ -126,6 +141,8 @@ def loadATMAppLog():
             count += 1
 
     print("  Rows written: " + str(count))
+    if skippedCount > 0:
+        print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/atm_application_log.txt")
 
 
@@ -147,10 +164,22 @@ def loadATMHardwareLog():
                     "threshold_value","firmware_version", "_anomaly"
         ])
 
+        # required fields per schema
+        requiredFields = ["timestamp", "atm_id", "component", "event_type", "severity", "message"]
+
         count        = 0
+        skippedCount = 0
 
         for rec in records:
-            rowNumber = count + 1
+            rowNumber = count + skippedCount + 1
+
+            if not checkRequiredFields(rec, requiredFields, rowNumber, FILE_ATM_HW_LOG):
+                skippedCount += 1
+                continue
+
+            if not isValidTimestamp(rec.get("timestamp", ""), rowNumber, FILE_ATM_HW_LOG):
+                skippedCount += 1
+                continue
 
             writer.writerow([
                 rec.get("timestamp",""),
@@ -170,7 +199,8 @@ def loadATMHardwareLog():
             count += 1
 
     print("  Rows written: " + str(count))
-
+    if skippedCount > 0:
+        print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/atm_hardware_sensor_log.txt")
 
 
@@ -193,11 +223,23 @@ def loadTerminalHandlerLog():
                     "exception_class","exception_message","db_query_time_ms","environment", "_anomaly"
         ])
 
-    
+        # required fields per schema
+        requiredFields = ["timestamp", "log_level", "service_name", "service_version",
+                        "event_type", "message", "environment"]
+
         count        = 0
+        skippedCount = 0
 
         for rec in records:
-            rowNumber = count + 1
+            rowNumber = count + skippedCount + 1
+
+            if not checkRequiredFields(rec, requiredFields, rowNumber, FILE_TERMINAL_LOG):
+                skippedCount += 1
+                continue
+
+            if not isValidTimestamp(rec.get("timestamp", ""), rowNumber, FILE_TERMINAL_LOG):
+                skippedCount += 1
+                continue
 
             writer.writerow([
                 rec.get("timestamp",""),
@@ -224,7 +266,8 @@ def loadTerminalHandlerLog():
             count += 1
 
     print("  Rows written: " + str(count))
-
+    if skippedCount > 0:
+        print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/terminal_handler_app_log.txt")
 
 
@@ -249,11 +292,25 @@ def loadKafkaStream():
                         "kafka_offset", "_anomaly"
         ])
 
+        # required fields per schema
+        requiredFields = ["timestamp", "event_id", "atm_id", "atm_status",
+                        "transaction_rate_tps", "response_time_ms", "transaction_volume",
+                        "transaction_success_rate", "transaction_failure_reason",
+                        "failure_count", "window_duration_seconds"]
+
         count        = 0
+        skippedCount = 0
 
         for rec in records:
-            rowNumber = count + 1
+            rowNumber = count + skippedCount + 1
 
+            if not checkRequiredFields(rec, requiredFields, rowNumber, FILE_KAFKA_STREAM):
+                skippedCount += 1
+                continue
+
+            if not isValidTimestamp(rec.get("timestamp", ""), rowNumber, FILE_KAFKA_STREAM):
+                skippedCount += 1
+                continue
 
             writer.writerow([
                     rec.get("timestamp",""),
@@ -275,7 +332,8 @@ def loadKafkaStream():
             count += 1
 
     print("  Rows written: " + str(count))
-
+    if skippedCount > 0:
+        print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/kafka_atm_metrics_stream.txt")
 
 
@@ -299,11 +357,22 @@ def loadPrometheusMetrics():
                 "label_env","help_text", "_anomaly"
             ])
 
+            # required fields per schema
+            requiredFields = ["timestamp", "metric_name", "metric_type", "metric_value", "service_name"]
 
             count        = 0
+            skippedCount = 0
 
             for row in reader:
-                rowNumber = count + 1
+                rowNumber = count + skippedCount + 1
+
+                if not checkRequiredFields(row, requiredFields, rowNumber, FILE_PROMETHEUS_METRICS):
+                    skippedCount += 1
+                    continue
+
+                if not isValidTimestamp(row.get("timestamp", ""), rowNumber, FILE_PROMETHEUS_METRICS):
+                    skippedCount += 1
+                    continue
 
                 writer.writerow([
                     row.get("timestamp",""),
@@ -321,7 +390,8 @@ def loadPrometheusMetrics():
                 count += 1
 
     print("  Rows written: " + str(count))
-
+    if skippedCount > 0:
+        print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/prometheus_metrics.txt")
 
 
@@ -347,13 +417,23 @@ def loadWindowsMetrics():
                 "event_log_errors_last_min", "_anomaly"
             ])
 
+            # required fields per schema
+            requiredFields = ["timestamp", "atm_id", "hostname", "cpu_usage_percent",
+                            "memory_used_mb", "memory_total_mb", "disk_free_gb"]
 
             count        = 0
+            skippedCount = 0
 
             for row in reader:
-                rowNumber = count + 1
+                rowNumber = count + skippedCount + 1
 
+                if not checkRequiredFields(row, requiredFields, rowNumber, FILE_WINDOWS_METRICS):
+                    skippedCount += 1
+                    continue
 
+                if not isValidTimestamp(row.get("timestamp", ""), rowNumber, FILE_WINDOWS_METRICS):
+                    skippedCount += 1
+                    continue
 
                 writer.writerow([
                     row.get("timestamp",""),
@@ -378,7 +458,8 @@ def loadWindowsMetrics():
                 count += 1
 
     print("  Rows written: " + str(count))
-
+    if skippedCount > 0:
+        print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/windows_os_metrics.txt")
 
 
@@ -403,11 +484,24 @@ def loadGCPMetrics():
                 "label_version", "_anomaly"
             ])
 
+            # required fields per schema
+            requiredFields = ["timestamp", "project_id", "resource_type", "resource_id",
+                            "metric_name", "metric_value"]
 
             count        = 0
+            skippedCount = 0
 
             for row in reader:
-                rowNumber = count + 1
+                rowNumber = count + skippedCount + 1
+
+                if not checkRequiredFields(row, requiredFields, rowNumber, FILE_GCP_METRICS):
+                    skippedCount += 1
+                    continue
+
+                if not isValidTimestamp(row.get("timestamp", ""), rowNumber, FILE_GCP_METRICS):
+                    skippedCount += 1
+                    continue
+
                 writer.writerow([
                     row.get("timestamp",""),
                     row.get("project_id",""),
@@ -431,9 +525,9 @@ def loadGCPMetrics():
                 count += 1
 
     print("  Rows written: " + str(count))
-
+    if skippedCount > 0:
+        print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/gcp_cloud_metrics.txt")
-
 
 
 def checkRowCounts():

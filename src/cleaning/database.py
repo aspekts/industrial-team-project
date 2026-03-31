@@ -8,11 +8,11 @@ class DatabaseHandler:
         if isinstance(py_type, tuple):
             py_type = py_type[0]
             
-        if py_type == int:
+        if py_type is int:
             return "INTEGER"
-        elif py_type == float:
+        elif py_type is float:
             return "REAL"
-        elif py_type == str:
+        elif py_type is str:
             return "TEXT"
         else:
             return "TEXT"
@@ -118,9 +118,8 @@ class DatabaseHandler:
                 else:
                     for row in rows:
                         print(f"   {row}")
-            except Exception as e:
+            except Exception:
                 print("Master view failed")
 
             # Test if the individual ATM views were created
             cursor.execute("SELECT name FROM sqlite_master WHERE type='view' AND name LIKE 'view_%';")
-            views = cursor.fetchall()

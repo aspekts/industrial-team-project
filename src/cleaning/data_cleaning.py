@@ -1,9 +1,8 @@
-import json
 import csv
+import json
 import os
 
 from src.cleaning.schemas import LOG_SCHEMAS
-from src.cleaning.database import DatabaseHandler
 
 class LogCleaner:
     def __init__(self, db_handler, input_dir, error_dir):
@@ -44,7 +43,7 @@ class LogCleaner:
     def validate_types(self, raw_line, schema_type):
         schema = LOG_SCHEMAS.get(schema_type)
 
-        print(f"Checking value types for the following log:\n{raw_line}")
+        # print(f"Checking value types for the following log:\n{raw_line}")
 
         for field, expected_type in schema.items():
             raw_value = raw_line.get(field)
@@ -83,7 +82,7 @@ class LogCleaner:
                     
                     clean_log[field] = t(target)
                     break
-                except:
+                except Exception:
                     continue
 
         return clean_log
@@ -116,7 +115,7 @@ class LogCleaner:
                             continue
                         
                         buffer.append((schema, clean_line))
-                    except:
+                    except Exception:
                         broken_logs.append(line)
                         continue
 
@@ -134,4 +133,4 @@ class LogCleaner:
                 print(f"Saved broken log to {error_path}")
 
             
-        print("Pipeline Complete. Data loaded to SQL.")
+        print("[INFO] Data loaded to SQL.")

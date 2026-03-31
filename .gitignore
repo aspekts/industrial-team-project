@@ -34,9 +34,14 @@ htmlcov/
 # Generated / runtime data (never commit real or generated bulk data)
 Logs/
 loaded_logs/
-data/clean/
-data/raw/
-data/synthetic
+data/clean/*
+!data/clean/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/synthetic/*
+!data/synthetic/.gitkeep
+data/logs/*
+!data/logs/.gitkeep
 
 # Editor
 .vscode/
