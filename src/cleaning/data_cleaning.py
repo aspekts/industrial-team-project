@@ -114,6 +114,7 @@ class LogCleaner:
                         clean_line = self.convert_types(line, schema)
                         buffer.append((schema, clean_line))
                     except Exception:
+                        broken_logs.append(line)
                         continue
 
                     if len(buffer) >= batch_size:

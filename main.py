@@ -38,6 +38,16 @@ def run_pipeline():
 
     # Stage 5: Correlate detections into cross-source incidents
     Correlator(db_path=CLEANED_DB_PATH).store_incidents()
+def run_simulation(interval_min=5):
+    try:
+        while True:
+            try:
+                run_pipeline()
+            except Exception:
+                continue
+            time.sleep(interval_min * 60)
+    except KeyboardInterrupt:
+        print("Keyboard interrupt.")
 
 if __name__ == "__main__":
     run_pipeline()
