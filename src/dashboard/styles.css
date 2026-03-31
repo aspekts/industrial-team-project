@@ -683,8 +683,12 @@ p {
 .metric-link-hint {
   margin-top: auto;
   padding-top: 0.65rem;
-  color: var(--brand);
+  color: transparent;
   font-weight: 700;
+}
+
+.metric-card-action .metric-link-hint {
+  color: var(--brand);
 }
 
 .status-inline {

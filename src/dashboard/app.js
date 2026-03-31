@@ -25,7 +25,7 @@ const uiStateModes = {
 const roleViewConfig = {
   admin: {
     defaultScreen: "dashboard",
-    allowedScreens: ["dashboard", "alerts", "settings"],
+    allowedScreens: ["dashboard", "atm-list", "alerts", "settings"],
     dashboardTitle: "Admin platform view",
     dashboardDescription: "Review source readiness, access model, and platform health across all pipeline components.",
     dashboardStatus: "Platform",
@@ -193,9 +193,14 @@ const roleScreenContent = {
     searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
+      atmList: "ATM fleet",
       alerts: "Exceptions",
       settings: "Settings",
     },
+    listTitle: "Full ATM fleet",
+    listDescription: "Platform-wide view of all monitored ATMs, their current status, and active anomaly counts.",
+    filtersTitle: "Fleet filters",
+    tableTitle: "ATM fleet overview",
     alertsTitle: "Cross-system exception groups",
     alertsDescription: "Review platform-wide exceptions, policy-impacting issues, and source-level concerns that need administrative visibility.",
     criticalGroupTitle: "Platform exceptions",
@@ -228,11 +233,10 @@ const roleScreenContent = {
     searchPlaceholder: "Search",
     navLabels: {
       dashboard: "Overview",
-      atmDetail: "Incident detail",
       atmList: "ATM list",
       alerts: "Incidents",
-      settings: "Settings",
       actionCenter: "Action center",
+      settings: "Settings",
     },
     detailTitle: "Technical incident detail",
     detailDescription: "Use this page for ATM-level evidence, failure sequence review, and system troubleshooting context.",
@@ -256,22 +260,22 @@ const roleScreenContent = {
 // null = card is shown as a read-only metric (no navigation).
 const roleCardTargets = {
   admin: [
-    { target: "settings",  hint: "Review source configuration" },
+    { target: "atm-list",  hint: "View ATM fleet" },
     { target: "alerts",    hint: "Review policy exceptions" },
-    { target: null,         hint: "" },
-    { target: null,         hint: "" },
+    { target: "alerts",    hint: "Review hardware exceptions" },
+    { target: "settings",  hint: "Review platform configuration" },
   ],
   manager: [
     { target: "atm-list",  hint: "View ATM queue" },
     { target: "alerts",    hint: "Review anomaly groups" },
-    { target: null,         hint: "" },
+    { target: "alerts",    hint: "Review queue pressure" },
     { target: "settings",  hint: "Review thresholds" },
   ],
   ops: [
-    { target: "atm-list",   hint: "View ATM list" },
-    { target: "alerts",     hint: "Review incidents" },
-    { target: "atm-detail", hint: "Open incident detail" },
-    { target: "settings",   hint: "Review configuration" },
+    { target: "atm-list",      hint: "View ATM list" },
+    { target: "alerts",        hint: "Review incidents" },
+    { target: "action-center", hint: "Take action" },
+    { target: "settings",      hint: "Review configuration" },
   ],
 };
 
@@ -434,7 +438,10 @@ function setMetricCardState(metricKey, mode, payload = {}) {
   }
 
   if (state.hintNode) {
-    if (mode === uiStateModes.LOADING) {
+    const isClickable = state.card.classList.contains("metric-card-action");
+    if (!isClickable) {
+      state.hintNode.textContent = "";
+    } else if (mode === uiStateModes.LOADING) {
       state.hintNode.textContent = payload.loadingHint ?? "";
     } else if (mode === uiStateModes.UNAVAILABLE) {
       state.hintNode.textContent = payload.unavailableHint ?? "";
@@ -570,11 +577,10 @@ function applyRoleDashboardCopy() {
 
   const navLabelMap = {
     dashboard: document.querySelector('[data-screen-target="dashboard"] span'),
-    atmDetail: document.querySelector('[data-screen-target="atm-detail"] span'),
     atmList: document.querySelector('[data-screen-target="atm-list"] span'),
     alerts: document.querySelector('[data-screen-target="alerts"] span'),
-    settings: document.querySelector('[data-screen-target="settings"] span'),
     actionCenter: document.querySelector('[data-screen-target="action-center"] span'),
+    settings: document.querySelector('[data-screen-target="settings"] span'),
   };
 
   Object.entries(screenContent.navLabels).forEach(([key, value]) => {

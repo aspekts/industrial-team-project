@@ -91,14 +91,14 @@ def loadATMAppLog():
     with open(FILE_ATM_APP_LOG, 'r', encoding='utf-8') as InFile:
         records = json.load(InFile)
 
-    with open(OutputFolder + "/atm_application_logs.txt", 'w', newline='', encoding='utf-8') as Outfile:
+    with open(OutputFolder + "/atm_application_log.txt", 'w', newline='', encoding='utf-8') as Outfile:
         writer = csv.writer(Outfile)
 
         # write header row
         writer.writerow(["timestamp","log_level","atm_id","location_code","session_id",
                     "correlation_id","transaction_id","event_type","message","component",
                     "thread_id","response_time_ms","error_code","error_detail","atm_status",
-                    "os_version","app_version"
+                    "os_version","app_version","_anomaly"
         ])
 
         # required fields per schema (non-nullable fields only)
@@ -136,14 +136,15 @@ def loadATMAppLog():
                 rec.get("error_detail",""),
                 rec.get("atm_status",""),
                 rec.get("os_version",""),
-                rec.get("app_version","")
+                rec.get("app_version",""),
+                None
             ])
             count += 1
 
     print("  Rows written: " + str(count))
     if skippedCount > 0:
         print("  Rows skipped (malformed): " + str(skippedCount))
-    print("  Saved to: " + OutputFolder + "/atm_application_logs.txt")
+    print("  Saved to: " + OutputFolder + "/atm_application_log.txt")
 
 
 def loadATMHardwareLog():
@@ -155,13 +156,13 @@ def loadATMHardwareLog():
     with open(FILE_ATM_HW_LOG, 'r', encoding='utf-8') as InFile:
         records = json.load(InFile)
 
-    with open(OutputFolder + "/atm_hardware_sensor_logs.txt", 'w', newline='', encoding='utf-8') as Outfile:
+    with open(OutputFolder + "/atm_hardware_sensor_log.txt", 'w', newline='', encoding='utf-8') as Outfile:
         writer = csv.writer(Outfile)
 
         # write header row
         writer.writerow(["timestamp","atm_id","correlation_id","component","event_type",
                     "severity","message","metric_name","metric_value","metric_unit",
-                    "threshold_value","firmware_version"
+                    "threshold_value","firmware_version","_anomaly"
         ])
 
         # required fields per schema
@@ -193,14 +194,15 @@ def loadATMHardwareLog():
                 rec.get("metric_value",""),
                 rec.get("metric_unit",""),
                 rec.get("threshold_value",""),
-                rec.get("firmware_version","")
+                rec.get("firmware_version",""),
+                None
             ])
             count += 1
 
     print("  Rows written: " + str(count))
     if skippedCount > 0:
         print("  Rows skipped (malformed): " + str(skippedCount))
-    print("  Saved to: " + OutputFolder + "/atm_hardware_sensor_logs.txt")
+    print("  Saved to: " + OutputFolder + "/atm_hardware_sensor_log.txt")
 
 
 def loadTerminalHandlerLog():
@@ -219,7 +221,7 @@ def loadTerminalHandlerLog():
         writer.writerow(["timestamp","log_level","service_name","service_version","container_id",
                     "pod_name","correlation_id","transaction_id","atm_id","event_type",
                     "message","logger_name","thread_name","response_time_ms","http_status_code",
-                    "exception_class","exception_message","db_query_time_ms","environment"
+                    "exception_class","exception_message","db_query_time_ms","environment","_anomaly"
         ])
 
         # required fields per schema
@@ -259,7 +261,8 @@ def loadTerminalHandlerLog():
                 rec.get("exception_class",""),
                 rec.get("exception_message",""),
                 rec.get("db_query_time_ms",""),
-                rec.get("environment","")
+                rec.get("environment",""),
+                None
             ])
             count += 1
 
@@ -287,7 +290,7 @@ def loadKafkaStream():
                         "transaction_rate_tps","response_time_ms","transaction_volume",
                         "transaction_success_rate","transaction_failure_reason",
                         "failure_count","window_duration_seconds","kafka_partition",
-                        "kafka_offset"
+                        "kafka_offset","_anomaly"
         ])
 
         # required fields per schema
@@ -324,7 +327,8 @@ def loadKafkaStream():
                     rec.get("failure_count",""),
                     rec.get("window_duration_seconds",""),
                     rec.get("kafka_partition",""),
-                    rec.get("kafka_offset","")
+                    rec.get("kafka_offset",""),
+                    None
             ])
             count += 1
 
@@ -351,7 +355,7 @@ def loadPrometheusMetrics():
             writer.writerow([
                 "timestamp","metric_name","metric_type","metric_value",
                 "service_name","pod_name","container_id","label_area",
-                "label_env","help_text"
+                "label_env","help_text","_anomaly"
             ])
 
             # required fields per schema
@@ -381,7 +385,8 @@ def loadPrometheusMetrics():
                     row.get("container_id",""),
                     row.get("label_area",""),
                     row.get("label_env",""),
-                    row.get("help_text","")
+                    row.get("help_text",""),
+                    None
                 ])
                 count += 1
 
@@ -410,7 +415,7 @@ def loadWindowsMetrics():
                 "disk_read_bytes_per_sec","disk_write_bytes_per_sec","disk_free_gb",
                 "network_bytes_sent_per_sec","network_bytes_recv_per_sec",
                 "network_errors","process_count","system_uptime_seconds",
-                "event_log_errors_last_min"
+                "event_log_errors_last_min","_anomaly"
             ])
 
             # required fields per schema
@@ -449,6 +454,7 @@ def loadWindowsMetrics():
                     row.get("process_count",""),
                     row.get("system_uptime_seconds",""),
                     row.get("event_log_errors_last_min",""),
+                    None
                 ])
                 count += 1
 
@@ -476,7 +482,7 @@ def loadGCPMetrics():
                 "metric_name","metric_value","metric_unit","cpu_usage_percent",
                 "memory_usage_bytes","memory_limit_bytes","network_ingress_bytes",
                 "network_egress_bytes","restart_count","label_app","label_env",
-                "label_version"
+                "label_version","_anomaly"
             ])
 
             # required fields per schema
@@ -515,6 +521,7 @@ def loadGCPMetrics():
                     row.get("label_app",""),
                     row.get("label_env",""),
                     row.get("label_version",""),
+                    None
                 ])
                 count += 1
 
@@ -523,15 +530,13 @@ def loadGCPMetrics():
         print("  Rows skipped (malformed): " + str(skippedCount))
     print("  Saved to: " + OutputFolder + "/gcp_cloud_metrics.txt")
 
-    print("  Saved to: " + OutputFolder + "/gcp_cloud_metrics.txt")
-
 
 def checkRowCounts():
     print("\nRow counts in output files:")
 
     files = [
-        "atm_application_logs.txt",
-        "atm_hardware_sensor_logs.txt",
+        "atm_application_log.txt",
+        "atm_hardware_sensor_log.txt",
         "terminal_handler_app_log.txt",
         "kafka_atm_metrics_stream.txt",
         "prometheus_metrics.txt",
