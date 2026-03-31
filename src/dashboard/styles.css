@@ -1283,3 +1283,262 @@ legend,
     --content-max-width: 100%;
   }
 }
+
+/* ─── Recommendation engine (Issue 14) ──────────────────────────────────── */
+
+.rec-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rec-card {
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: calc(var(--radius) * 0.65);
+  padding: var(--panel-padding);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rec-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rec-card-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rec-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rec-root-cause {
+  margin: 0;
+  font-size: calc(0.9rem * var(--ui-scale));
+}
+
+.rec-steps {
+  margin: 0.25rem 0 0;
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: calc(0.875rem * var(--ui-scale));
+}
+
+.rec-explanation {
+  margin: 0;
+  font-style: italic;
+}
+
+.rec-conf {
+  display: inline-block;
+  padding: 0.15em 0.55em;
+  border-radius: 999px;
+  font-size: calc(0.78rem * var(--ui-scale));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rec-conf-high {
+  background: #d4edda;
+  color: #1a5c2a;
+}
+
+.rec-conf-mid {
+  background: #fff3cd;
+  color: #7a5a00;
+}
+
+.rec-conf-low {
+  background: #f7e9e7;
+  color: var(--critical-text);
+}
+
+.rec-source {
+  margin: 0;
+}
+
+/* ─── Feedback buttons (Issue 15) ───────────────────────────────────────── */
+
+.rec-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--panel-border);
+}
+
+.rec-feedback-label {
+  font-size: calc(0.85rem * var(--ui-scale));
+  color: var(--muted);
+}
+
+.rec-feedback-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.feedback-btn {
+  border: 1px solid var(--panel-border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.3em 0.9em;
+  font-size: calc(0.82rem * var(--ui-scale));
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.feedback-btn:hover {
+  background: var(--surface-alt);
+  border-color: var(--brand);
+  color: var(--brand-strong);
+}
+
+.feedback-btn.feedback-active {
+  border-color: var(--brand-strong);
+  background: var(--brand);
+  color: #fff;
+}
+
+/* ─── Feedback stats grid ────────────────────────────────────────────────── */
+
+.feedback-stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.feedback-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: calc(var(--radius) * 0.5);
+  padding: 0.45rem 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ─── Admin analysis panel ──────────────────────────────────────────────── */
+
+.admin-analysis-panel {
+  margin-bottom: 1.25rem;
+}
+
+.admin-analysis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 700px) {
+  .admin-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-stat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.admin-stat-row {
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.admin-stat dt {
+  font-size: calc(0.76rem * var(--ui-scale));
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.admin-stat dd {
+  font-size: calc(1.5rem * var(--ui-scale));
+  font-weight: 700;
+  margin: 0;
+  color: var(--brand-strong);
+  line-height: 1.1;
+}
+
+.admin-ml-sources,
+.admin-rec-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: calc(0.875rem * var(--ui-scale));
+}
+
+/* ─── Admin anomaly breakdown table ──────────────────────────────────────── */
+
+#admin-anomaly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: calc(0.875rem * var(--ui-scale));
+}
+
+#admin-anomaly-table th,
+#admin-anomaly-table td {
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+#admin-anomaly-table thead th {
+  font-size: calc(0.76rem * var(--ui-scale));
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  border-bottom: 2px solid var(--panel-border);
+}
+
+#admin-anomaly-table tbody tr:last-child td,
+#admin-anomaly-table tbody tr:last-child th {
+  border-bottom: none;
+}
+
+/* Hide ops-facing feedback controls from admin */
+[data-dashboard-role="admin"] .rec-feedback {
+  display: none;
+}
+
+/* ─── Search result count ───────────────────────────────────────────────── */
+
+.search-result-count {
+  font-size: calc(0.78rem * var(--ui-scale));
+  color: var(--muted);
+  margin: 0.25rem 0 0;
+  padding: 0 0.25rem;
+}

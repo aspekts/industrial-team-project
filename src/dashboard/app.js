@@ -25,7 +25,7 @@ const uiStateModes = {
 const roleViewConfig = {
   admin: {
     defaultScreen: "dashboard",
-    allowedScreens: ["dashboard", "atm-list", "alerts", "settings"],
+    allowedScreens: ["dashboard", "atm-list", "alerts", "data-flow", "settings"],
     dashboardTitle: "Admin platform view",
     dashboardDescription: "Review source readiness, access model, and platform health across all pipeline components.",
     dashboardStatus: "Platform",
@@ -45,7 +45,7 @@ const roleViewConfig = {
   },
   ops: {
     defaultScreen: "dashboard",
-    allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "settings", "action-center"],
+    allowedScreens: ["dashboard", "atm-detail", "atm-list", "alerts", "data-flow", "settings", "action-center"],
     dashboardTitle: "Operations",
     dashboardDescription: "",
     dashboardStatus: "Loading...",
@@ -194,15 +194,16 @@ const roleScreenContent = {
     navLabels: {
       dashboard: "Overview",
       atmList: "ATM fleet",
-      alerts: "Exceptions",
+      alerts: "Anomaly patterns",
+      dataFlow: "Data flow",
       settings: "Settings",
     },
     listTitle: "Full ATM fleet",
     listDescription: "Platform-wide view of all monitored ATMs, their current status, and active anomaly counts.",
     filtersTitle: "Fleet filters",
     tableTitle: "ATM fleet overview",
-    alertsTitle: "Cross-system exception groups",
-    alertsDescription: "Review platform-wide exceptions, policy-impacting issues, and source-level concerns that need administrative visibility.",
+    alertsTitle: "Anomaly pattern analysis",
+    alertsDescription: "Review active anomaly type distribution, cross-source detection groups, and recommendation engine performance across the monitored fleet.",
     criticalGroupTitle: "Platform exceptions",
     warningGroupTitle: "Source watchlist",
     settingsTitle: "Platform settings",
@@ -236,6 +237,7 @@ const roleScreenContent = {
       atmList: "ATM list",
       alerts: "Incidents",
       actionCenter: "Action center",
+      dataFlow: "Data flow",
       settings: "Settings",
     },
     detailTitle: "Technical incident detail",
@@ -263,19 +265,19 @@ const roleCardTargets = {
     { target: "atm-list",  hint: "View ATM fleet" },
     { target: "alerts",    hint: "Review policy exceptions" },
     { target: "alerts",    hint: "Review hardware exceptions" },
-    { target: "settings",  hint: "Review platform configuration" },
+    { target: "data-flow", hint: "Inspect data flow" },
   ],
   manager: [
     { target: "atm-list",  hint: "View ATM queue" },
     { target: "alerts",    hint: "Review anomaly groups" },
     { target: "alerts",    hint: "Review queue pressure" },
-    { target: "settings",  hint: "Review thresholds" },
+    { target: "data-flow", hint: "Inspect data flow" },
   ],
   ops: [
     { target: "atm-list",      hint: "View ATM list" },
     { target: "alerts",        hint: "Review incidents" },
     { target: "action-center", hint: "Take action" },
-    { target: "settings",      hint: "Review configuration" },
+    { target: "data-flow",     hint: "Inspect data flow" },
   ],
 };
 
@@ -288,6 +290,7 @@ let activeDateFilter = "";
 const validScreenIds = new Set(activeRoleConfig.allowedScreens);
 let currentAtmId = null;
 let currentPrioritySummary = null;
+let currentRecommendations = [];
 
 function setLargeUi(isEnabled) {
   document.body.classList.toggle("large-ui", isEnabled);
@@ -580,6 +583,7 @@ function applyRoleDashboardCopy() {
     atmList: document.querySelector('[data-screen-target="atm-list"] span'),
     alerts: document.querySelector('[data-screen-target="alerts"] span'),
     actionCenter: document.querySelector('[data-screen-target="action-center"] span'),
+    dataFlow: document.querySelector('[data-screen-target="data-flow"] span'),
     settings: document.querySelector('[data-screen-target="settings"] span'),
   };
 
@@ -666,20 +670,64 @@ function setDashboardLoadingState() {
 function filterAtmRows(query) {
   const atmRows = document.querySelectorAll("#atm-list tbody tr");
   if (!atmRows.length) {
-    return false;
+    return 0;
   }
 
-  let hasMatch = false;
+  let matchCount = 0;
   atmRows.forEach((row) => {
     const rowText = normalizeSearchValue(row.textContent);
     const isMatch = !query || rowText.includes(query);
     row.hidden = !isMatch;
     if (isMatch) {
-      hasMatch = true;
+      matchCount += 1;
     }
   });
 
-  return hasMatch;
+  return matchCount;
+}
+
+function filterAnomalyItems(query) {
+  const critItems = document.querySelectorAll("#alerts-critical-list li");
+  const warnItems = document.querySelectorAll("#alerts-warning-list li");
+  const recItems = document.querySelectorAll("#rec-list .rec-card");
+  let matchCount = 0;
+
+  [critItems, warnItems].forEach((items) => {
+    items.forEach((item) => {
+      const text = normalizeSearchValue(item.textContent);
+      const isMatch = !query || text.includes(query);
+      item.hidden = !isMatch;
+      if (isMatch) matchCount += 1;
+    });
+  });
+
+  recItems.forEach((card) => {
+    const text = normalizeSearchValue(card.textContent);
+    const isMatch = !query || text.includes(query);
+    card.hidden = !isMatch;
+  });
+
+  return matchCount;
+}
+
+function setSearchResultCount(count, context) {
+  const el = document.getElementById("search-result-count");
+  if (!el) return;
+  if (!context) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.textContent = count > 0
+    ? `${count} result${count !== 1 ? "s" : ""} in ${context}`
+    : `No results found`;
+}
+
+function clearSearchFilters() {
+  filterAtmRows("");
+  filterAnomalyItems("");
+  setSearchResultCount(0, null);
 }
 
 function getSearchableScreenIds() {
@@ -710,33 +758,42 @@ function applySearch(query) {
   const normalizedQuery = normalizeSearchValue(query);
 
   if (!normalizedQuery) {
-    filterAtmRows("");
-    if (globalSearchInput) {
-      globalSearchInput.setCustomValidity("");
-    }
+    clearSearchFilters();
+    if (globalSearchInput) globalSearchInput.setCustomValidity("");
     return;
   }
 
-  const matchedAtmRows = filterAtmRows(normalizedQuery);
-  if (matchedAtmRows && validScreenIds.has("atm-list")) {
+  // 1. Filter ATM rows — if matches found, navigate to ATM list
+  const atmMatchCount = filterAtmRows(normalizedQuery);
+  if (atmMatchCount && validScreenIds.has("atm-list")) {
     navigateToScreen("atm-list");
-    if (globalSearchInput) {
-      globalSearchInput.setCustomValidity("");
-    }
+    setSearchResultCount(atmMatchCount, "ATM list");
+    if (globalSearchInput) globalSearchInput.setCustomValidity("");
     return;
   }
 
+  // 2. Filter anomaly items — if matches found, navigate to alerts
+  const anomalyMatchCount = filterAnomalyItems(normalizedQuery);
+  const alertsScreenId = validScreenIds.has("alerts") ? "alerts" : null;
+  if (anomalyMatchCount && alertsScreenId) {
+    navigateToScreen(alertsScreenId);
+    setSearchResultCount(anomalyMatchCount, "anomaly groups");
+    if (globalSearchInput) globalSearchInput.setCustomValidity("");
+    return;
+  }
+
+  // 3. Navigate to a screen whose content or nav label matches
   const targetScreenId = findBestSearchTarget(normalizedQuery);
   if (targetScreenId) {
     navigateToScreen(targetScreenId);
-    if (globalSearchInput) {
-      globalSearchInput.setCustomValidity("");
-    }
+    setSearchResultCount(1, document.querySelector(`[data-screen-target="${targetScreenId}"] span`)?.textContent || targetScreenId);
+    if (globalSearchInput) globalSearchInput.setCustomValidity("");
     return;
   }
 
+  setSearchResultCount(0, "dashboard");
   if (globalSearchInput) {
-    globalSearchInput.setCustomValidity("No matching dashboard content found.");
+    globalSearchInput.setCustomValidity("No matching content found.");
     globalSearchInput.reportValidity();
   }
 }
@@ -771,6 +828,11 @@ function configureRoleView() {
       }
     }
   });
+
+  const adminAnalysisPanel = document.getElementById("admin-analysis-panel");
+  if (adminAnalysisPanel) adminAnalysisPanel.hidden = dashboardRole !== "admin";
+  const adminAnomalyBreakdown = document.getElementById("admin-anomaly-breakdown");
+  if (adminAnomalyBreakdown) adminAnomalyBreakdown.hidden = dashboardRole !== "admin";
 }
 
 function showScreen(targetId) {
@@ -838,10 +900,9 @@ if (accessibilityToggle) {
 
 if (globalSearchInput) {
   globalSearchInput.addEventListener("input", (event) => {
-    if (globalSearchInput.validity.customError) {
-      globalSearchInput.setCustomValidity("");
-    }
-    applySearch(event.target.value);
+    if (globalSearchInput.validity.customError) globalSearchInput.setCustomValidity("");
+    if (!event.target.value.trim()) clearSearchFilters();
+    else applySearch(event.target.value);
   });
 
   globalSearchInput.addEventListener("keydown", (event) => {
@@ -904,6 +965,27 @@ if (confirmActionButton && confirmationCard) {
   });
 }
 
+if (dateFilterForm) {
+  dateFilterForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = dateFilterInput ? dateFilterInput.value.trim() : "";
+    if (value) {
+      activeDateFilter = value;
+      updateDateFilterStatusFromState();
+      fetchDashboardData();
+    }
+  });
+}
+
+if (dateFilterClearButton) {
+  dateFilterClearButton.addEventListener("click", () => {
+    activeDateFilter = "";
+    if (dateFilterInput) dateFilterInput.value = "";
+    updateDateFilterStatusFromState();
+    fetchDashboardData();
+  });
+}
+
 window.addEventListener("hashchange", () => {
   const targetId = window.location.hash.replace("#", "") || activeRoleConfig.defaultScreen;
   showScreen(validScreenIds.has(targetId) ? targetId : activeRoleConfig.defaultScreen);
@@ -918,6 +1000,18 @@ applyRoleDashboardCopy();
 const initialTargetId = window.location.hash.replace("#", "") || activeRoleConfig.defaultScreen;
 showScreen(validScreenIds.has(initialTargetId) ? initialTargetId : activeRoleConfig.defaultScreen);
 
+const feedbackHistoryToggle = document.getElementById("feedback-history-toggle");
+if (feedbackHistoryToggle) {
+  feedbackHistoryToggle.addEventListener("click", () => {
+    const histList = document.getElementById("feedback-history-list");
+    if (!histList) return;
+    const isHidden = histList.hidden;
+    histList.hidden = !isHidden;
+    feedbackHistoryToggle.textContent = isHidden ? "Hide history" : "Show history";
+    feedbackHistoryToggle.setAttribute("aria-expanded", String(isHidden));
+  });
+}
+
 // ─── Data layer ───────────────────────────────────────────────────────────────
 
 async function fetchDashboardData() {
@@ -929,19 +1023,21 @@ async function fetchDashboardData() {
   );
 
   try {
-    const [summary, scale, snapshot, atmList, alerts, trend, sourceChecks, prioritySummary, winosTrend, mlSummary, incidents] =
+    const [summary, scale, snapshot, atmList, alerts, trend, sourceChecks, prioritySummary, winosTrend, mlSummary, incidents, recommendations, feedbackHistory] =
       await Promise.all([
-        fetch("/api/summary").then((r) => r.json()),
-        fetch("/api/scale").then((r) => r.json()),
-        fetch("/api/source-snapshot").then((r) => r.json()),
-        fetch("/api/atm-list").then((r) => r.json()),
-        fetch("/api/alerts").then((r) => r.json()),
+        fetch(buildApiUrl("/api/summary")).then((r) => r.json()),
+        fetch(buildApiUrl("/api/scale")).then((r) => r.json()),
+        fetch(buildApiUrl("/api/source-snapshot")).then((r) => r.json()),
+        fetch(buildApiUrl("/api/atm-list")).then((r) => r.json()),
+        fetch(buildApiUrl("/api/alerts")).then((r) => r.json()),
         fetch("/api/trend").then((r) => r.json()),
         fetch("/api/source-checks").then((r) => r.json()),
         fetch("/api/priority-summary").then((r) => r.json()),
         fetch("/api/winos-trend").then((r) => r.json()),
         fetch("/api/ml-summary").then((r) => r.json()),
         fetch("/api/incidents").then((r) => r.json()),
+        fetch("/api/recommendations").then((r) => r.json()),
+        fetch("/api/feedback-history").then((r) => r.json()),
       ]);
 
     if (summary.status === "ok") populateSummary(summary);
@@ -957,6 +1053,30 @@ async function fetchDashboardData() {
     if (sourceChecks.status === "ok") populateSourceChecks(sourceChecks.checks);
     if (mlSummary.status === "ok") populateMlSummary(mlSummary);
     if (incidents.status === "ok") populateIncidents(incidents);
+    if (dashboardRole === "admin") {
+      const mlData = mlSummary.status === "ok" ? mlSummary : { total_scored: 0, total_anomalies: 0, model_version: null, sources: [] };
+      const fbData = feedbackHistory.status === "ok" ? feedbackHistory : { stats: [], history: [] };
+      populateAdminAnalysisPanel(mlData, fbData);
+      if (alerts.status === "ok" && recommendations.status === "ok") {
+        populateAdminAnomalyBreakdown(alerts, recommendations.recommendations);
+      }
+    }
+    if (validScreenIds.has("data-flow")) {
+      const snapData = snapshot.status === "ok" ? snapshot : { sources: [] };
+      const alertsData = alerts.status === "ok" ? alerts : { critical: [], warning: [] };
+      const mlData = mlSummary.status === "ok" ? mlSummary : { total_scored: 0, total_anomalies: 0, model_version: null, sources: [] };
+      const incData = incidents.status === "ok" ? incidents : { incidents: [], total: 0 };
+      const recData = recommendations.status === "ok" ? recommendations : { recommendations: [] };
+      populateDataFlow(snapData, alertsData, mlData, incData, recData);
+    }
+    if (recommendations.status === "ok") {
+      currentRecommendations = recommendations.recommendations;
+      populateRecommendations(recommendations.recommendations);
+      if (dashboardRole === "ops" && recommendations.recommendations.length > 0) {
+        populateActionCenterFromRec(recommendations.recommendations);
+      }
+    }
+    if (feedbackHistory.status === "ok") populateFeedbackHistory(feedbackHistory);
     if (prioritySummary.status === "ok") {
       currentPrioritySummary = prioritySummary;
       populatePrioritySummary(prioritySummary);
@@ -1622,4 +1742,458 @@ function populateSettingsSourceList(sources) {
     .join("");
 }
 
+function populateRecommendations(recs) {
+  const list = document.getElementById("rec-list");
+  const pill = document.getElementById("rec-summary-pill");
+
+  if (dashboardRole === "admin") {
+    const h3 = document.getElementById("rec-panel-title");
+    if (h3) h3.textContent = "Recommendation engine performance";
+    const recPanel = document.querySelector(".rec-panel");
+    const desc = recPanel ? recPanel.querySelector(".metric-subnote") : null;
+    if (desc) desc.textContent = "Per-anomaly rule performance as seen by the operations team. Confidence reflects the base rule score adjusted by operator feedback.";
+  }
+
+  if (pill) {
+    const critCount = recs.filter((r) => r.severity === "CRITICAL").length;
+    pill.textContent = recs.length === 0 ? "None" : critCount > 0 ? `${critCount} Critical` : `${recs.length} active`;
+    pill.className = `status-pill ${critCount > 0 ? "status-critical" : recs.length > 0 ? "status-warning" : "status-ok"}`;
+  }
+
+  if (!list) return;
+  if (!recs.length) {
+    list.innerHTML = "<li class=\"rec-card\"><div class=\"rec-card-header\"><strong>No active anomaly recommendations — run the pipeline to generate detections.</strong></div></li>";
+    return;
+  }
+
+  list.innerHTML = recs
+    .map((r) => {
+      const confPct = Math.round(r.confidence * 100);
+      const confClass = confPct >= 80 ? "rec-conf-high" : confPct >= 60 ? "rec-conf-mid" : "rec-conf-low";
+      const sevClass = r.severity === "CRITICAL" ? "status-critical" : "status-warning";
+      const atm = r.atm_id && r.atm_id !== "N/A" ? ` / ${r.atm_id}` : "";
+      const stepsHtml = r.steps
+        .map((s, i) => `<li>${s}</li>`)
+        .join("");
+      return `
+      <li class="rec-card" data-anomaly-type="${r.anomaly_type}" data-atm-id="${r.atm_id || ""}">
+        <div class="rec-card-header">
+          <div class="rec-card-title-row">
+            <strong>${r.anomaly_name} (${r.anomaly_type})</strong>
+            <span class="status-pill ${sevClass}" style="margin-left:0.5rem;">${r.severity}</span>
+            <span class="rec-conf ${confClass}" style="margin-left:0.5rem;">${confPct}% confidence</span>
+          </div>
+          <p class="rec-source metric-subnote">${r.source}${atm}</p>
+        </div>
+        <div class="rec-card-body">
+          <p class="rec-root-cause"><strong>Root cause:</strong> ${r.root_cause}</p>
+          <ol class="rec-steps">${stepsHtml}</ol>
+          <p class="rec-explanation metric-subnote"><em>Why triggered:</em> ${r.explanation}</p>
+        </div>
+        <div class="rec-feedback" role="group" aria-label="Rate this recommendation">
+          <span class="rec-feedback-label">Was this recommendation helpful?</span>
+          <div class="rec-feedback-buttons">
+            <button class="feedback-btn feedback-like" type="button" data-vote="like" data-anomaly-type="${r.anomaly_type}" data-atm-id="${r.atm_id || ""}" aria-label="Mark recommendation as helpful">
+              Helpful
+            </button>
+            <button class="feedback-btn feedback-dislike" type="button" data-vote="dislike" data-anomaly-type="${r.anomaly_type}" data-atm-id="${r.atm_id || ""}" aria-label="Mark recommendation as not helpful">
+              Not helpful
+            </button>
+          </div>
+        </div>
+      </li>`;
+    })
+    .join("");
+
+  wireFeedbackButtons();
+}
+
+function wireFeedbackButtons() {
+  document.querySelectorAll(".feedback-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const vote = btn.dataset.vote;
+      const anomalyType = btn.dataset.anomalyType;
+      const atmId = btn.dataset.atmId || "";
+      const card = btn.closest(".rec-card");
+
+      // Optimistic UI
+      card.querySelectorAll(".feedback-btn").forEach((b) => b.classList.remove("feedback-active"));
+      btn.classList.add("feedback-active");
+      btn.setAttribute("aria-pressed", "true");
+
+      const result = await sendFeedback(anomalyType, atmId, vote);
+      if (result && result.adjusted_confidence !== undefined) {
+        const confEl = card.querySelector(".rec-conf");
+        if (confEl) {
+          const newPct = Math.round(result.adjusted_confidence * 100);
+          confEl.textContent = `${newPct}% confidence`;
+          confEl.className = `rec-conf ${newPct >= 80 ? "rec-conf-high" : newPct >= 60 ? "rec-conf-mid" : "rec-conf-low"}`;
+        }
+        // Refresh feedback history
+        try {
+          const hist = await fetch("/api/feedback-history").then((r) => r.json());
+          if (hist.status === "ok") populateFeedbackHistory(hist);
+        } catch {}
+      }
+    });
+  });
+}
+
+async function sendFeedback(anomalyType, atmId, vote) {
+  try {
+    const resp = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anomaly_type: anomalyType, atm_id: atmId, vote }),
+    });
+    return await resp.json();
+  } catch (err) {
+    console.warn("[dashboard] feedback submit failed:", err);
+    return null;
+  }
+}
+
+function populateFeedbackHistory(data) {
+  const statsList = document.getElementById("feedback-stats-list");
+  const histList = document.getElementById("feedback-history-list");
+
+  if (statsList) {
+    if (!data.stats || data.stats.length === 0) {
+      statsList.innerHTML = "<p class=\"metric-subnote\">No feedback recorded yet — use the like/dislike buttons above to start training the model.</p>";
+    } else {
+      statsList.innerHTML = data.stats
+        .map((s) => {
+          const total = s.likes + s.dislikes;
+          const likeRate = total > 0 ? Math.round((s.likes / total) * 100) : 0;
+          return `
+          <div class="feedback-stat-item">
+            <strong>${s.anomaly_type}</strong>
+            <span class="metric-subnote">${s.likes} helpful / ${s.dislikes} not helpful</span>
+            <span class="rec-conf ${likeRate >= 60 ? "rec-conf-high" : likeRate >= 40 ? "rec-conf-mid" : "rec-conf-low"}">${likeRate}% approval</span>
+          </div>`;
+        })
+        .join("");
+    }
+  }
+
+  if (histList) {
+    const toggleBtn = document.getElementById("feedback-history-toggle");
+    if (!data.history || data.history.length === 0) {
+      histList.innerHTML = "<li>No feedback recorded yet.</li>";
+      return;
+    }
+    histList.innerHTML = data.history
+      .map((h) => {
+        const voteLabel = h.vote === "like" ? "Helpful" : "Not helpful";
+        const atm = h.atm_id ? ` / ${h.atm_id}` : "";
+        const roleLabel = h.user_role ? ` (${h.user_role})` : "";
+        return `<li><strong>${h.anomaly_type}${atm}</strong> — ${voteLabel}${roleLabel} <span class="metric-subnote">${(h.created_at || "").slice(0, 16)}</span></li>`;
+      })
+      .join("");
+  }
+}
+
+function populateActionCenterFromRec(recs) {
+  if (!recs || recs.length === 0) return;
+  const top = recs[0];
+  const atm = top.atm_id && top.atm_id !== "N/A" ? top.atm_id : "affected ATM";
+
+  const recommendations = [
+    {
+      title: top.steps[0] || `Investigate ${top.anomaly_name} on ${atm}`,
+      detail: `Root cause: ${top.root_cause.slice(0, 100)}${top.root_cause.length > 100 ? "..." : ""}`,
+    },
+    {
+      title: recs.length > 1 ? (recs[1].steps[0] || `Address ${recs[1].anomaly_name}`) : `Escalate ${atm} for on-site inspection`,
+      detail: recs.length > 1
+        ? `Root cause: ${recs[1].root_cause.slice(0, 100)}${recs[1].root_cause.length > 100 ? "..." : ""}`
+        : "Raise service ticket if hardware evidence is corroborated by ATMH alerts.",
+    },
+    {
+      title: "Monitor and defer — no immediate action",
+      detail: `Schedule follow-up after next KAFK window for ${atm}.`,
+    },
+  ];
+
+  ["action-option-1", "action-option-2", "action-option-3"].forEach((id, i) => {
+    const titleEl = document.getElementById(id);
+    const detailEl = document.getElementById(`${id}-detail`);
+    if (titleEl) titleEl.textContent = recommendations[i].title;
+    if (detailEl) detailEl.textContent = recommendations[i].detail;
+  });
+
+  const textarea = document.getElementById("action-textarea");
+  if (textarea) textarea.placeholder = `Add notes for ${atm} — ${top.anomaly_name}`;
+}
+
 fetchDashboardData();
+
+function populateAdminAnalysisPanel(mlSummary, feedbackHistory) {
+  if (dashboardRole !== "admin") return;
+
+  const pill = document.getElementById("admin-analysis-pill");
+  if (pill) {
+    const hasData = mlSummary.total_scored > 0;
+    pill.textContent = hasData ? "Pipeline active" : "No ML data";
+    pill.className = `status-pill ${hasData ? "status-ok" : ""}`;
+  }
+
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  set("admin-stat-scored", (mlSummary.total_scored || 0).toLocaleString());
+  set("admin-stat-anomalies", (mlSummary.total_anomalies || 0).toLocaleString());
+  set("admin-stat-model", mlSummary.model_version || "Not available");
+
+  const srcList = document.getElementById("admin-ml-sources");
+  if (srcList) {
+    if (!mlSummary.sources || mlSummary.sources.length === 0) {
+      srcList.innerHTML = `<li class="metric-subnote">No ML scoring data available — run the pipeline to generate scores.</li>`;
+    } else {
+      srcList.innerHTML = mlSummary.sources
+        .map((s) => {
+          const anomRate = s.scored > 0 ? Math.round((s.anomalies / s.scored) * 100) : 0;
+          return `<li><strong>${s.source}</strong> — ${s.scored.toLocaleString()} scored, ${s.anomalies} anomal${s.anomalies !== 1 ? "ies" : "y"} (${anomRate}% flagged)</li>`;
+        })
+        .join("");
+    }
+  }
+
+  const recStats = document.getElementById("admin-rec-stats");
+  if (recStats) {
+    if (!feedbackHistory.stats || feedbackHistory.stats.length === 0) {
+      recStats.innerHTML = `<li class="metric-subnote">No operator feedback recorded yet. Ops-team feedback from the Anomaly patterns page adjusts rule confidence scores.</li>`;
+    } else {
+      recStats.innerHTML = feedbackHistory.stats
+        .map((s) => {
+          const total = s.likes + s.dislikes;
+          const approvalPct = total > 0 ? Math.round((s.likes / total) * 100) : null;
+          const confClass =
+            approvalPct === null
+              ? ""
+              : approvalPct >= 60
+              ? "rec-conf-high"
+              : approvalPct >= 40
+              ? "rec-conf-mid"
+              : "rec-conf-low";
+          const approvalBadge =
+            approvalPct !== null
+              ? `<span class="rec-conf ${confClass}" style="margin-left:0.4rem;">${approvalPct}% approval</span>`
+              : "";
+          return `<li><strong>${s.anomaly_type}</strong> — ${s.likes} helpful / ${s.dislikes} not helpful${approvalBadge}</li>`;
+        })
+        .join("");
+    }
+  }
+}
+
+function populateAdminAnomalyBreakdown(alerts, recommendations) {
+  if (dashboardRole !== "admin") return;
+
+  const pill = document.getElementById("admin-breakdown-pill");
+  const tbody = document.getElementById("admin-anomaly-tbody");
+
+  const all = [...(alerts.critical || []), ...(alerts.warning || [])];
+  const byType = {};
+  all.forEach((a) => {
+    const key = a.anomaly_type;
+    if (!byType[key]) {
+      byType[key] = { name: a.anomaly_name, severity: a.severity, groups: 0, atms: new Set() };
+    }
+    byType[key].groups += 1;
+    if (a.atm_id && a.atm_id !== "N/A") byType[key].atms.add(a.atm_id);
+  });
+
+  const recByType = {};
+  recommendations.forEach((r) => {
+    recByType[r.anomaly_type] = r.confidence;
+  });
+
+  const types = Object.entries(byType).sort((a, b) => {
+    if (a[1].severity === "CRITICAL" && b[1].severity !== "CRITICAL") return -1;
+    if (b[1].severity === "CRITICAL" && a[1].severity !== "CRITICAL") return 1;
+    return b[1].groups - a[1].groups;
+  });
+
+  if (pill) {
+    const critTypes = types.filter(([, v]) => v.severity === "CRITICAL").length;
+    pill.textContent = `${types.length} type${types.length !== 1 ? "s" : ""} active`;
+    pill.className = `status-pill ${critTypes > 0 ? "status-critical" : types.length > 0 ? "status-warning" : "status-ok"}`;
+  }
+
+  if (!tbody) return;
+  if (!types.length) {
+    tbody.innerHTML = `<tr><td colspan="6">No anomaly detections found — run the pipeline to generate data.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = types
+    .map(([type, info]) => {
+      const sevClass = info.severity === "CRITICAL" ? "status-critical" : "status-warning";
+      const atmsArr = Array.from(info.atms);
+      const atmsLabel =
+        atmsArr.length === 0
+          ? "—"
+          : atmsArr.length <= 2
+          ? atmsArr.join(", ")
+          : `${atmsArr.slice(0, 2).join(", ")} +${atmsArr.length - 2} more`;
+      const conf = recByType[type];
+      const confPct = conf !== undefined ? Math.round(conf * 100) : null;
+      const confClass =
+        confPct === null ? "" : confPct >= 80 ? "rec-conf-high" : confPct >= 60 ? "rec-conf-mid" : "rec-conf-low";
+      const confCell = confPct !== null ? `<span class="rec-conf ${confClass}">${confPct}%</span>` : "—";
+      return `
+      <tr>
+        <th scope="row">${type}</th>
+        <td>${info.name}</td>
+        <td><span class="status-pill ${sevClass}">${info.severity}</span></td>
+        <td>${info.groups}</td>
+        <td>${atmsLabel}</td>
+        <td>${confCell}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function populateDataFlow(snapshot, alerts, mlSummary, incidents, recommendations) {
+  const setStage = (n, { metric, details, pillText, pillClass }) => {
+    const metricEl = document.getElementById(`stage-${n}-metric`);
+    const detailEl = document.getElementById(`stage-${n}-detail`);
+    const pillEl = document.getElementById(`stage-${n}-pill`);
+    if (metricEl) metricEl.textContent = metric;
+    if (detailEl) detailEl.innerHTML = details.map((d) => `<li>${d}</li>`).join("");
+    if (pillEl) {
+      pillEl.textContent = pillText;
+      pillEl.className = `status-pill ${pillClass}`;
+    }
+  };
+
+  // Stage 1 — Source ingestion
+  const presentSources = snapshot.sources.filter((s) => s.signal === "present");
+  const emptySources = snapshot.sources.filter((s) => s.signal === "empty");
+  const absentSources = snapshot.sources.filter((s) => s.signal === "absent");
+  setStage(1, {
+    metric: `${presentSources.length} / ${snapshot.sources.length} sources`,
+    details: [
+      `Active: ${presentSources.map((s) => s.source).join(", ") || "None"}`,
+      emptySources.length ? `Empty: ${emptySources.map((s) => s.source).join(", ")}` : "All loaded sources have records",
+      absentSources.length ? `Absent: ${absentSources.map((s) => s.source).join(", ")}` : "No absent sources",
+    ],
+    pillText: presentSources.length === snapshot.sources.length ? "All active" : presentSources.length > 0 ? "Partial" : "No data",
+    pillClass: presentSources.length === snapshot.sources.length ? "status-ok" : presentSources.length > 0 ? "status-warning" : "status-critical",
+  });
+
+  // Stage 2 — Rule detection
+  const allDetections = [...(alerts.critical || []), ...(alerts.warning || [])];
+  const detectedTypes = [...new Set(allDetections.map((d) => d.anomaly_type))];
+  const affectedAtms = new Set(allDetections.map((d) => d.atm_id).filter(Boolean));
+  setStage(2, {
+    metric: `${allDetections.length} detection group${allDetections.length !== 1 ? "s" : ""}`,
+    details: [
+      `${(alerts.critical || []).length} critical, ${(alerts.warning || []).length} warning`,
+      detectedTypes.length ? `Types: ${detectedTypes.join(", ")}` : "No anomaly types detected",
+      `${affectedAtms.size} ATM${affectedAtms.size !== 1 ? "s" : ""} affected`,
+    ],
+    pillText: (alerts.critical || []).length > 0 ? "Critical active" : allDetections.length > 0 ? "Warnings only" : "Clean",
+    pillClass: (alerts.critical || []).length > 0 ? "status-critical" : allDetections.length > 0 ? "status-warning" : "status-ok",
+  });
+
+  // Stage 3 — ML scoring
+  const mlFlagRate = mlSummary.total_scored > 0
+    ? Math.round((mlSummary.total_anomalies / mlSummary.total_scored) * 100)
+    : 0;
+  setStage(3, {
+    metric: mlSummary.total_scored > 0 ? `${mlSummary.total_scored.toLocaleString()} scored` : "No scores",
+    details: [
+      mlSummary.total_scored > 0
+        ? `${mlSummary.total_anomalies} flagged (${mlFlagRate}% anomaly rate)`
+        : "Run pipeline to generate ML scores",
+      mlSummary.model_version ? `Model: ${mlSummary.model_version}` : "Model version: unknown",
+      mlSummary.sources && mlSummary.sources.length > 0
+        ? `Sources scored: ${mlSummary.sources.map((s) => s.source).join(", ")}`
+        : "No source breakdown available",
+    ],
+    pillText: mlSummary.total_scored > 0 ? (mlFlagRate > 10 ? "High anomaly rate" : "Normal") : "No data",
+    pillClass: mlSummary.total_scored > 0 ? (mlFlagRate > 10 ? "status-warning" : "status-ok") : "",
+  });
+
+  // Stage 4 — Incident correlation
+  const critIncidents = (incidents.incidents || []).filter((i) => i.severity === "CRITICAL").length;
+  setStage(4, {
+    metric: `${incidents.total || 0} incident group${incidents.total !== 1 ? "s" : ""}`,
+    details: [
+      `${critIncidents} critical, ${(incidents.total || 0) - critIncidents} warning`,
+      incidents.total > 0
+        ? `Strategies: ${[...new Set((incidents.incidents || []).map((i) => i.strategy === "correlation_id" ? "correlation_id" : "time-window"))].join(", ")}`
+        : "No incidents grouped yet — run pipeline",
+      incidents.total > 0
+        ? `ATMs spanned: ${[...new Set((incidents.incidents || []).flatMap((i) => (i.atm_ids || "").split(",").map((s) => s.trim())))].filter(Boolean).length}`
+        : "",
+    ].filter(Boolean),
+    pillText: critIncidents > 0 ? `${critIncidents} Critical` : incidents.total > 0 ? `${incidents.total} grouped` : "No incidents",
+    pillClass: critIncidents > 0 ? "status-critical" : incidents.total > 0 ? "status-warning" : "status-ok",
+  });
+
+  // Stage 5 — Recommendations
+  const recs = recommendations.recommendations || [];
+  const critRecs = recs.filter((r) => r.severity === "CRITICAL");
+  const avgConf = recs.length > 0
+    ? Math.round((recs.reduce((s, r) => s + r.confidence, 0) / recs.length) * 100)
+    : 0;
+  setStage(5, {
+    metric: `${recs.length} recommendation${recs.length !== 1 ? "s" : ""}`,
+    details: [
+      recs.length > 0 ? `${critRecs.length} critical priority` : "No active recommendations",
+      recs.length > 0 ? `Average confidence: ${avgConf}%` : "Run pipeline to generate detections",
+      recs.length > 0
+        ? `Rules active: ${[...new Set(recs.map((r) => r.anomaly_type))].join(", ")}`
+        : "",
+    ].filter(Boolean),
+    pillText: critRecs.length > 0 ? "Action required" : recs.length > 0 ? "Active" : "No data",
+    pillClass: critRecs.length > 0 ? "status-critical" : recs.length > 0 ? "status-warning" : "",
+  });
+
+  // Overall status pill
+  const overallPill = document.getElementById("data-flow-status-pill");
+  if (overallPill) {
+    const hasCrit = (alerts.critical || []).length > 0 || critIncidents > 0;
+    overallPill.textContent = presentSources.length === 0 ? "No pipeline data" : hasCrit ? "Critical signals" : "Pipeline active";
+    overallPill.className = `status-pill ${presentSources.length === 0 ? "" : hasCrit ? "status-critical" : "status-ok"}`;
+  }
+
+  // Source-level breakdown table
+  const tbody = document.getElementById("flow-sources-tbody");
+  if (!tbody) return;
+
+  const mlBySource = {};
+  (mlSummary.sources || []).forEach((s) => { mlBySource[s.source] = s; });
+
+  const detBySource = {};
+  allDetections.forEach((d) => {
+    detBySource[d.source] = (detBySource[d.source] || 0) + 1;
+  });
+
+  if (!snapshot.sources.length) {
+    tbody.innerHTML = `<tr><td colspan="6">No source data — run the pipeline to populate.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = snapshot.sources
+    .map((s) => {
+      const ml = mlBySource[s.source];
+      const dets = detBySource[s.source] || 0;
+      const signalClass = s.signal === "present" ? "status-ok" : s.signal === "empty" ? "" : "";
+      const signalLabel = s.signal === "present" ? "Active" : s.signal === "empty" ? "Empty" : "Absent";
+      return `
+      <tr>
+        <th scope="row">${s.source}</th>
+        <td>${s.status}</td>
+        <td><span class="status-pill ${signalClass}">${signalLabel}</span></td>
+        <td>${ml ? ml.scored.toLocaleString() : "—"}</td>
+        <td>${ml ? ml.anomalies : "—"}</td>
+        <td>${dets > 0 ? dets : "—"}</td>
+      </tr>`;
+    })
+    .join("");
+}

@@ -25,8 +25,9 @@
 
         <label class="search-field sidebar-search">
           <span class="sr-only">Search</span>
-          <input type="search" placeholder="Search" />
+          <input type="search" placeholder="Search ATMs, anomalies..." />
         </label>
+        <p id="search-result-count" class="search-result-count" aria-live="polite" hidden></p>
 
         <section class="date-filter-panel" aria-labelledby="date-filter-title">
           <div>
@@ -101,11 +102,11 @@
           <button class="nav-link nav-link-action" type="button" data-screen-target="action-center">
             <span>Action center</span>
           </button>
+          <button class="nav-link" type="button" data-screen-target="data-flow">
+            <span>Data flow</span>
+          </button>
           <button class="nav-link" type="button" data-screen-target="settings">
             <span>Settings</span>
-          </button>
-          <button class="nav-link nav-link-action" type="button" data-screen-target="action-center">
-            <span>Action center</span>
           </button>
         </nav>
       </aside>
@@ -161,6 +162,45 @@
             <p class="metric-link-hint">Inspect data flow</p>
           </article>
         </div>
+
+        <section class="panel admin-analysis-panel" id="admin-analysis-panel" aria-labelledby="admin-analysis-title" hidden>
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">ML pipeline</p>
+              <h3 id="admin-analysis-title">Pipeline analysis</h3>
+            </div>
+            <span id="admin-analysis-pill" class="status-pill">Loading...</span>
+          </div>
+          <div class="admin-analysis-grid">
+            <div class="admin-stat-group">
+              <p class="eyebrow" style="margin:0 0 0.5rem;">Anomaly detection model</p>
+              <dl class="admin-stat-row">
+                <div class="admin-stat">
+                  <dt>Records scored</dt>
+                  <dd id="admin-stat-scored">—</dd>
+                </div>
+                <div class="admin-stat">
+                  <dt>Anomalies flagged</dt>
+                  <dd id="admin-stat-anomalies">—</dd>
+                </div>
+                <div class="admin-stat">
+                  <dt>Model version</dt>
+                  <dd id="admin-stat-model">—</dd>
+                </div>
+              </dl>
+              <ul class="admin-ml-sources" id="admin-ml-sources" style="margin-top:0.75rem;">
+                <li class="metric-subnote">Run the pipeline to generate ML scores.</li>
+              </ul>
+            </div>
+            <div class="admin-stat-group">
+              <p class="eyebrow" style="margin:0 0 0.5rem;">Recommendation engine</p>
+              <p class="metric-subnote" style="margin:0 0 0.5rem;">Operator feedback from the ops team adjusts rule confidence scores. Higher approval rates indicate well-calibrated rules.</p>
+              <ul class="admin-rec-stats" id="admin-rec-stats">
+                <li class="metric-subnote">No operator feedback recorded yet.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
 
         <div class="dashboard-grid">
           <section class="panel panel-hero" aria-labelledby="priority-title">
@@ -451,6 +491,33 @@
           </div>
         </div>
 
+        <section class="panel" id="admin-anomaly-breakdown" aria-labelledby="admin-breakdown-title" hidden style="margin-bottom:1.5rem;">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Pattern analysis</p>
+              <h3 id="admin-breakdown-title">Anomaly type distribution</h3>
+            </div>
+            <span id="admin-breakdown-pill" class="status-pill">Loading...</span>
+          </div>
+          <p class="metric-subnote" style="margin-bottom:0.75rem;">Active detection groups across the monitored fleet, grouped by anomaly type. Confidence reflects the rule base score adjusted by accumulated operator feedback.</p>
+          <table id="admin-anomaly-table">
+            <caption class="sr-only">Anomaly type distribution across the monitored fleet</caption>
+            <thead>
+              <tr>
+                <th scope="col">Type</th>
+                <th scope="col">Name</th>
+                <th scope="col">Severity</th>
+                <th scope="col">Detection groups</th>
+                <th scope="col">ATMs affected</th>
+                <th scope="col">Rule confidence</th>
+              </tr>
+            </thead>
+            <tbody id="admin-anomaly-tbody">
+              <tr><td colspan="6">Loading anomaly patterns...</td></tr>
+            </tbody>
+          </table>
+        </section>
+
         <div class="alerts-grid">
           <section class="panel" aria-labelledby="group-critical-title">
             <h3 id="group-critical-title">Critical anomalies</h3>
@@ -486,6 +553,39 @@
             <li>Loading correlated incidents...</li>
           </ul>
         </section>
+
+      <section class="panel rec-panel" aria-labelledby="rec-panel-title" style="margin-top:1.5rem;">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Intelligent diagnostics</p>
+            <h3 id="rec-panel-title">Recommendations</h3>
+          </div>
+          <span id="rec-summary-pill" class="status-pill">Loading...</span>
+        </div>
+        <p class="metric-subnote" style="margin-bottom:0.75rem;">Rule-based recommendations for each active anomaly, ranked by confidence. Confidence adjusts automatically based on operator feedback.</p>
+        <ul id="rec-list" class="rec-list" aria-label="Anomaly recommendations">
+          <li class="rec-card">
+            <div class="rec-card-header">
+              <strong>Loading recommendations...</strong>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel" aria-labelledby="feedback-history-title" style="margin-top:1.5rem;">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Self-learning loop</p>
+            <h3 id="feedback-history-title">Feedback history</h3>
+          </div>
+          <button class="text-button" type="button" id="feedback-history-toggle" aria-expanded="false">Show history</button>
+        </div>
+        <p class="metric-subnote" style="margin-bottom:0.75rem;">Each like or dislike adjusts the confidence score for that recommendation type. The model re-weights automatically as feedback accumulates.</p>
+        <div id="feedback-stats-list" class="feedback-stats-grid" style="margin-bottom:0.75rem;"></div>
+        <ul id="feedback-history-list" class="simple-list compact-list" hidden>
+          <li>No feedback recorded yet.</li>
+        </ul>
+      </section>
       </section>
 
       <section class="screen" id="settings" aria-labelledby="settings-title">
@@ -609,6 +709,125 @@
           </section>
         </div>
       </section>
+      <section class="screen" id="data-flow" aria-labelledby="data-flow-title">
+        <div class="screen-header">
+          <div>
+            <p class="eyebrow">Pipeline</p>
+            <h2 id="data-flow-title">Data flow inspection</h2>
+            <p>End-to-end view from source ingestion through anomaly detection, ML scoring, incident correlation, and recommendation generation.</p>
+          </div>
+          <span id="data-flow-status-pill" class="status-pill">Loading...</span>
+        </div>
+
+        <div class="flow-pipeline" role="list" aria-label="Pipeline stages">
+          <article class="flow-stage" role="listitem" aria-labelledby="stage-1-title">
+            <div class="flow-stage-header">
+              <span class="flow-stage-number" aria-hidden="true">1</span>
+              <div>
+                <p class="eyebrow">Ingestion</p>
+                <h3 id="stage-1-title">Source data</h3>
+              </div>
+              <span id="stage-1-pill" class="status-pill">—</span>
+            </div>
+            <p class="flow-stage-metric" id="stage-1-metric">—</p>
+            <ul class="flow-stage-detail" id="stage-1-detail">
+              <li>Loading...</li>
+            </ul>
+          </article>
+
+          <div class="flow-arrow" aria-hidden="true"></div>
+
+          <article class="flow-stage" role="listitem" aria-labelledby="stage-2-title">
+            <div class="flow-stage-header">
+              <span class="flow-stage-number" aria-hidden="true">2</span>
+              <div>
+                <p class="eyebrow">Analysis</p>
+                <h3 id="stage-2-title">Rule detection</h3>
+              </div>
+              <span id="stage-2-pill" class="status-pill">—</span>
+            </div>
+            <p class="flow-stage-metric" id="stage-2-metric">—</p>
+            <ul class="flow-stage-detail" id="stage-2-detail">
+              <li>Loading...</li>
+            </ul>
+          </article>
+
+          <div class="flow-arrow" aria-hidden="true"></div>
+
+          <article class="flow-stage" role="listitem" aria-labelledby="stage-3-title">
+            <div class="flow-stage-header">
+              <span class="flow-stage-number" aria-hidden="true">3</span>
+              <div>
+                <p class="eyebrow">ML</p>
+                <h3 id="stage-3-title">Anomaly scoring</h3>
+              </div>
+              <span id="stage-3-pill" class="status-pill">—</span>
+            </div>
+            <p class="flow-stage-metric" id="stage-3-metric">—</p>
+            <ul class="flow-stage-detail" id="stage-3-detail">
+              <li>Loading...</li>
+            </ul>
+          </article>
+
+          <div class="flow-arrow" aria-hidden="true"></div>
+
+          <article class="flow-stage" role="listitem" aria-labelledby="stage-4-title">
+            <div class="flow-stage-header">
+              <span class="flow-stage-number" aria-hidden="true">4</span>
+              <div>
+                <p class="eyebrow">Correlation</p>
+                <h3 id="stage-4-title">Incident grouping</h3>
+              </div>
+              <span id="stage-4-pill" class="status-pill">—</span>
+            </div>
+            <p class="flow-stage-metric" id="stage-4-metric">—</p>
+            <ul class="flow-stage-detail" id="stage-4-detail">
+              <li>Loading...</li>
+            </ul>
+          </article>
+
+          <div class="flow-arrow" aria-hidden="true"></div>
+
+          <article class="flow-stage" role="listitem" aria-labelledby="stage-5-title">
+            <div class="flow-stage-header">
+              <span class="flow-stage-number" aria-hidden="true">5</span>
+              <div>
+                <p class="eyebrow">Intelligence</p>
+                <h3 id="stage-5-title">Recommendations</h3>
+              </div>
+              <span id="stage-5-pill" class="status-pill">—</span>
+            </div>
+            <p class="flow-stage-metric" id="stage-5-metric">—</p>
+            <ul class="flow-stage-detail" id="stage-5-detail">
+              <li>Loading...</li>
+            </ul>
+          </article>
+        </div>
+
+        <section class="panel flow-detail-panel" aria-labelledby="flow-sources-title" style="margin-top:1.5rem;">
+          <div class="panel-header">
+            <h3 id="flow-sources-title">Source-level breakdown</h3>
+            <span class="legend">Records per source through the pipeline</span>
+          </div>
+          <table id="flow-sources-table">
+            <caption class="sr-only">Per-source record counts, ML scoring, and detection groups</caption>
+            <thead>
+              <tr>
+                <th scope="col">Source</th>
+                <th scope="col">Records ingested</th>
+                <th scope="col">Signal</th>
+                <th scope="col">ML scored</th>
+                <th scope="col">ML anomalies</th>
+                <th scope="col">Detection groups</th>
+              </tr>
+            </thead>
+            <tbody id="flow-sources-tbody">
+              <tr><td colspan="6">Loading source detail...</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
       </main>
     </div>
 

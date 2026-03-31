@@ -1,0 +1,74 @@
+{
+  "A1": {
+    "name": "Network timeout cascade",
+    "root_cause": "Network link failure or host unreachable — KAFK transaction failures and ATMA DISCONNECT events indicate upstream connectivity loss.",
+    "steps": [
+      "Check network switch and cable connections for the affected ATM",
+      "Verify host reachability via ping or traceroute from the ATM management network",
+      "Review KAFK consumer group lag — if elevated, restart the Kafka consumer service",
+      "Inspect TERM logs for connection timeout patterns and repeat failure sequences"
+    ],
+    "confidence_base": 0.85,
+    "explanation": "Triggered by KAFK transaction_failure_reason containing network keywords AND ATMA NETWORK_DISCONNECT events on the same ATM within the monitoring window."
+  },
+  "A2": {
+    "name": "Cash cassette depletion",
+    "root_cause": "Cash cassette is empty or critically low — ATMH hardware sensor reports CRITICAL severity and KAFK records cash-related transaction failure reasons.",
+    "steps": [
+      "Dispatch cash replenishment team to the ATM location immediately",
+      "Confirm cassette status via ATMH hardware sensor reading before dispatch",
+      "Update ATM service status in the management system to reflect out-of-service state",
+      "Verify resolution after replenishment by monitoring KAFK transaction success rate"
+    ],
+    "confidence_base": 0.92,
+    "explanation": "Triggered by ATMH event_type CASSETTE_EMPTY or CASSETTE_LOW at CRITICAL or WARNING severity, corroborated by KAFK cash-related failure reasons."
+  },
+  "A4": {
+    "name": "Container restart loop",
+    "root_cause": "Application container is OOM-killed or crash-looping — GCP reports elevated restart_count and TERM shows fatal exception or OOM events.",
+    "steps": [
+      "Restart the ATM application container via the service orchestrator",
+      "Check GCP container logs for OOM killer messages and memory limit breaches",
+      "Review TERM logs for exception class and stack trace to identify root failure",
+      "Increase container memory limit if OOM is confirmed and reschedule the pod"
+    ],
+    "confidence_base": 0.78,
+    "explanation": "Triggered by GCP restart_count exceeding threshold OR TERM log_level FATAL with OOM or container exception class in the monitoring window."
+  },
+  "A5": {
+    "name": "Performance degradation",
+    "root_cause": "Transaction processing latency is elevated — KAFK reports high response_time_ms and reduced transaction_success_rate indicating throughput bottleneck.",
+    "steps": [
+      "Review KAFK response_time_ms trend for the affected ATM over the last 6 hours",
+      "Check WINOS CPU and memory usage — sustained high resource pressure degrades transaction throughput",
+      "Restart the ATM application service if transaction success rate drops below 70%",
+      "Escalate to the hardware team if ATMH also reports concurrent sensor warnings"
+    ],
+    "confidence_base": 0.74,
+    "explanation": "Triggered by KAFK response_time_ms above the configured threshold with transaction_success_rate below the acceptable level in the same observation window."
+  },
+  "A6": {
+    "name": "OS memory pressure",
+    "root_cause": "Windows host CPU or memory utilisation is critically elevated — WINOS reports sustained high values that constrain ATM application performance.",
+    "steps": [
+      "Identify top CPU-consuming processes on the WINOS host using task manager or remote tools",
+      "Free system memory by restarting non-critical background services",
+      "Check WINOS network_errors count — elevated values indicate resource starvation affecting connectivity",
+      "Schedule a host restart during the next maintenance window if pressure persists"
+    ],
+    "confidence_base": 0.80,
+    "explanation": "Triggered by WINOS cpu_usage_percent exceeding 80% or memory_usage_percent exceeding 90% within the monitoring window."
+  },
+  "A7": {
+    "name": "Out-of-order Kafka event",
+    "root_cause": "KAFK messages are arriving out of sequence or carry invalid offsets, indicating a stream integrity issue or producer misconfiguration.",
+    "steps": [
+      "Check KAFK consumer group offset lag for the affected ATM topic partition",
+      "Verify producer message ordering guarantees in the ATM application configuration",
+      "Review kafka_offset sequence values in KAFK records for the affected ATM",
+      "Reset consumer group offset to a known-good checkpoint if ordering corruption is confirmed"
+    ],
+    "confidence_base": 0.68,
+    "explanation": "Triggered by KAFK kafka_offset sequence anomaly or out-of-order event arrival detected by the pipeline integrity check."
+  }
+}
