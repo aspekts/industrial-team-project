@@ -9,7 +9,9 @@ from src.analysis.correlate import Correlator
 from src.ml.scorer import AnomalyScorer
 
 from configparser import ConfigParser
+import threading
 import time
+import os
 
 config = ConfigParser()
 config.read("config.ini")
@@ -50,9 +52,10 @@ def run_simulation(interval_min=5):
         print("Keyboard interrupt.")
 
 if __name__ == "__main__":
-    run_pipeline()
     app = create_app()
-    host = config.get("NETWORK", "host")
-    port = config.getint("NETWORK", "port")
-    print(f"[INFO] Pipeline complete. Starting dashboard on http://{host}:{port}")
+    host = os.environ.get("HOST", config.get("NETWORK", "host", fallback="0.0.0.0"))
+    port = int(os.environ.get("PORT", config.get("NETWORK", "port", fallback="5000")))
+    pipeline_thread = threading.Thread(target=run_pipeline, daemon=True)
+    pipeline_thread.start()
+    print(f"[INFO] Starting dashboard on http://{host}:{port}")
     app.run(host, port=port, debug=False)
