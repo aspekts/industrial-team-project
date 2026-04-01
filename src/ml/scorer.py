@@ -5,8 +5,16 @@ import pandas as pd
 
 from .features import FeatureExtractor
 from .model import AnomalyDetector
+from src.analysis.taxonomy import AnomalyTaxonomy
 
 SOURCES = ("KAFK", "WINOS", "GCP", "PROM")
+
+_SOURCE_LABELS = {
+    "KAFK": "Kafka ATM metrics",
+    "WINOS": "Windows OS metrics",
+    "GCP": "GCP cloud metrics",
+    "PROM": "Prometheus metrics",
+}
 
 """
 The AnomalyScorer class is responsible for orchestrating the feature extraction and anomaly detection processes. It uses the FeatureExtractor to load features from the database and the AnomalyDetector to identify anomalies based on those features. The class provides methods to score new data and update the model with new data over time. This class would also append anomaly scores to the original feature matrix for further analysis and documentation. These scores are then written back to the database for record-keeping and future reference.
@@ -33,6 +41,7 @@ class AnomalyScorer:
     """
     def score_and_store_anomalies(self):
         model_version = date.today().isoformat()
+        taxonomy = AnomalyTaxonomy(db_path=self.db_path)
 
         for source in SOURCES:
             # Load and train a fresh detector per source (feature shapes differ)
@@ -59,6 +68,21 @@ class AnomalyScorer:
             with sqlite3.connect(self.db_path) as conn:
                 results_df.to_sql('ml_anomaly_scores', conn, if_exists='append', index=False)
 
-            print(f"[INFO] {source}: scored {len(results_df)} rows, {int(is_anomaly.sum())} anomalies.")
+            anomaly_count = int(is_anomaly.sum())
+            print(f"[INFO] {source}: scored {len(results_df)} rows, {anomaly_count} anomalies.")
+
+            if anomaly_count > 0:
+                label = _SOURCE_LABELS.get(source, source)
+                taxonomy.register_dynamic(
+                    anomaly_type=f"ML-{source}",
+                    anomaly_name=f"ML-detected anomaly cluster ({label})",
+                    severity="WARNING",
+                    source=source,
+                    description=(
+                        f"Isolation Forest identified {anomaly_count} anomalous rows "
+                        f"in {label} (model version {model_version}). "
+                        f"Patterns fall outside the normal feature distribution for this source."
+                    ),
+                )
 
         print("[INFO] Storing and scoring anomalies complete.")

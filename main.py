@@ -6,6 +6,7 @@ from src.cleaning.database import DatabaseHandler
 from src.dashboard.server import create_app
 from src.analysis.detect import Detection
 from src.analysis.correlate import Correlator
+from src.analysis.taxonomy import AnomalyTaxonomy
 from src.ml.scorer import AnomalyScorer
 
 from configparser import ConfigParser
@@ -27,6 +28,9 @@ def run_pipeline():
 
     db_handler = DatabaseHandler(db_path=CLEANED_DB_PATH)
     db_handler.setup_database(LOG_SCHEMAS)
+
+    # Seed the A1-A7 static anomaly taxonomy before any analysis runs
+    AnomalyTaxonomy(db_path=CLEANED_DB_PATH).seed_static()
 
     cleaner = LogCleaner(db_handler=db_handler, input_dir=RAW_DATA_DIR, error_dir=ERROR_PATH)
     cleaner.process_all_files()
