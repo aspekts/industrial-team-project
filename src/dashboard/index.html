@@ -27,7 +27,34 @@
           <span class="sr-only">Search</span>
           <input type="search" placeholder="Search ATMs, anomalies..." />
         </label>
+        <p id="search-helper-text" class="search-helper-text">Search by ATM ID, branch, issue type, or source name.</p>
         <p id="search-result-count" class="search-result-count" aria-live="polite" hidden></p>
+
+        <section class="glossary-panel" aria-labelledby="glossary-title">
+          <div>
+            <p class="eyebrow">Terminology</p>
+            <h2 id="glossary-title" class="sidebar-panel-title">Source key</h2>
+          </div>
+          <dl class="glossary-list">
+            <div>
+              <dt>ATMA</dt>
+              <dd>ATM application logs</dd>
+            </div>
+            <div>
+              <dt>ATMH</dt>
+              <dd>ATM hardware alerts</dd>
+            </div>
+            <div>
+              <dt>KAFK</dt>
+              <dd>Transaction stream health</dd>
+            </div>
+            <div>
+              <dt>WINOS</dt>
+              <dd>Host CPU and memory health</dd>
+            </div>
+          </dl>
+          <p class="metric-subnote">Cards with an action hint open another dashboard view. Summaries without one are read-only.</p>
+        </section>
 
         <section class="date-filter-panel" aria-labelledby="date-filter-title">
           <div>
@@ -705,6 +732,14 @@
             <h3 id="confirmation-title">Confirmation</h3>
             <div class="confirmation-card" id="confirmation-card" tabindex="-1" aria-live="polite">
               <p>No action has been recorded yet.</p>
+            </div>
+            <div class="action-history-panel" aria-labelledby="action-history-title">
+              <div class="panel-header">
+                <h4 id="action-history-title">Recent actions</h4>
+              </div>
+              <ul id="action-history-list" class="simple-list compact-list action-history-list">
+                <li>No actions recorded yet.</li>
+              </ul>
             </div>
           </section>
         </div>

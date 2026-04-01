@@ -9,8 +9,8 @@
   --brand-strong: #27463b;
   --critical-bg: #f7e9e7;
   --critical-text: #801c1c;
-  --warning-bg: #eaf4ef;
-  --warning-text: #1f5145;
+  --warning-bg: #fff3db;
+  --warning-text: #6b4300;
   --focus: #005fcc;
   --radius: 16px;
   --shadow: 0 10px 24px rgba(17, 34, 24, 0.08);
@@ -130,6 +130,34 @@ summary {
 .sidebar-search {
   display: block;
   margin-bottom: 1rem;
+}
+
+.glossary-panel {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(155, 185, 168, 0.38);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow:
+    0 12px 24px rgba(39, 70, 59, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+.glossary-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.95rem 0 0.75rem;
+}
+
+.glossary-list dt {
+  color: var(--brand-strong);
+  font-weight: 700;
+}
+
+.glossary-list dd {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
 }
 
 .accessibility-panel {
@@ -332,6 +360,13 @@ p {
   width: 100%;
   max-width: 245px;
   padding: var(--control-padding-y) var(--control-padding-x);
+}
+
+.search-helper-text {
+  margin: -0.55rem 0 0.75rem;
+  padding: 0 0.25rem;
+  color: var(--muted);
+  font-size: calc(0.78rem * var(--ui-scale));
 }
 
 .nav-link,
@@ -771,7 +806,7 @@ p {
 .status-warning {
   background: var(--warning-bg);
   color: var(--warning-text);
-  border: 1px solid #9bb9a8;
+  border: 1px solid #d8b16a;
 }
 
 body[data-dashboard-role="admin"] .sidebar {
@@ -1172,9 +1207,9 @@ legend,
 }
 
 .status-ok {
-  background: #e0f0e6;
-  color: #1f5145;
-  border: 1px solid #9bb9a8;
+  background: #e8f1fb;
+  color: #143f78;
+  border: 1px solid #8fb0d9;
 }
 
 .nav-link-action {
@@ -1240,9 +1275,9 @@ legend,
 }
 
 .status-pill.status-ok {
-  background: #e0f0e6;
-  color: #1f5145;
-  border: 1px solid #9bb9a8;
+  background: #e8f1fb;
+  color: #143f78;
+  border: 1px solid #8fb0d9;
 }
 
 @media (max-width: 980px) {
@@ -1322,6 +1357,31 @@ legend,
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.rec-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.rec-actions .button,
+.rec-actions .button-secondary {
+  min-height: 2.6rem;
+}
+
+.quick-action-status {
+  min-height: 1.25rem;
+  color: var(--muted);
+  font-size: calc(0.82rem * var(--ui-scale));
+}
+
+.action-history-panel {
+  margin-top: 1rem;
+}
+
+.action-history-list {
+  padding-left: 1.1rem;
 }
 
 .rec-root-cause {

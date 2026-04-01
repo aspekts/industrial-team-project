@@ -35,13 +35,13 @@ const roleViewConfig = {
   },
   manager: {
     defaultScreen: "dashboard",
-    allowedScreens: ["dashboard", "atm-list", "alerts", "settings"],
+    allowedScreens: ["dashboard", "atm-list", "alerts", "action-center", "settings"],
     dashboardTitle: "Manager summary view",
-    dashboardDescription: "Review ATM coverage, grouped anomaly demand, and transaction throughput across monitored ATMs.",
+    dashboardDescription: "Review flagged ATM issues, business impact, and the actions that need follow-up across monitored ATMs.",
     dashboardStatus: "Loading...",
     bannerEyebrow: "Manager focus",
     bannerTitle: "Top operational anomaly will appear here.",
-    primaryActionLabel: "Review grouped anomalies",
+    primaryActionLabel: "Open action queue",
   },
   ops: {
     defaultScreen: "dashboard",
@@ -85,27 +85,27 @@ const roleCardContent = {
   manager: {
     observedAtms: {
       title: "ATM coverage",
-      note: "ATMs with records in ATMA source",
-      subnote: "Distinct ATM IDs observed in the pipeline window",
+      note: "ATMs with activity in the ATM application logs (ATMA)",
+      subnote: "Distinct ATM IDs observed in the current monitoring window",
       hint: "View ATM coverage",
     },
     atmAppErrors: {
-      title: "Anomaly groups",
-      note: "Critical anomaly detection groups",
-      subnote: "CRITICAL-severity groups from analysis_detections",
-      hint: "Review anomaly groups",
+      title: "Flagged issues",
+      note: "Critical issue groups needing manager review",
+      subnote: "Grouped detections that indicate a likely operational issue",
+      hint: "Review flagged issues",
     },
     hardwareAlerts: {
       title: "Queue pressure",
-      note: "ATMH warning and critical events",
-      subnote: "Hardware alerts contributing to operational queue",
+      note: "Hardware warnings and critical alerts from ATMH",
+      subnote: "Hardware signals contributing to the local action queue",
       hint: "Review queue pressure",
     },
     eventThroughput: {
       title: "Transaction summary",
       note: "Average transactions per second",
       subnote: "KAFK transaction_rate_tps rolling average",
-      hint: "Inspect transaction summary",
+      hint: "Open action queue",
     },
   },
   ops: {
@@ -190,7 +190,8 @@ const roleChartContent = {
 const roleScreenContent = {
   admin: {
     headerCopy: "Maintain cross-system visibility across source readiness, governance surfaces, and platform health.",
-    searchPlaceholder: "Search",
+    searchPlaceholder: "Search source, ATM ID, anomaly type, or page name",
+    searchHelper: "Search across fleet data, anomaly patterns, source coverage, and recommendation trends.",
     navLabels: {
       dashboard: "Overview",
       atmList: "ATM fleet",
@@ -211,11 +212,13 @@ const roleScreenContent = {
   },
   manager: {
     headerCopy: "Track immediate ATM issues, local operational pressure, and the next items that need action.",
-    searchPlaceholder: "Search",
+    searchPlaceholder: "Search ATM ID, branch, issue type, or source",
+    searchHelper: "Search across ATM queues, issue groups, incidents, and recommendations.",
     navLabels: {
       dashboard: "Overview",
       atmList: "ATM queue",
       alerts: "Action queue",
+      actionCenter: "Record action",
       settings: "Settings",
     },
     listTitle: "ATMs needing attention",
@@ -226,12 +229,15 @@ const roleScreenContent = {
     alertsDescription: "Review grouped operational issues that need local follow-up, escalation, or manager visibility.",
     criticalGroupTitle: "Needs action now",
     warningGroupTitle: "Monitor locally",
+    actionTitle: "Manager action center",
+    actionDescription: "Acknowledge flagged issues, assign follow-up work, and leave an auditable note for the next handoff.",
     settingsTitle: "Account and configuration",
     settingsDescription: "Review account details, detection thresholds, and source coverage.",
   },
   ops: {
     headerCopy: "",
-    searchPlaceholder: "Search",
+    searchPlaceholder: "Search ATM ID, branch, incident, source, or recommendation",
+    searchHelper: "Search across ATM incidents, recommendations, and supporting issue groups.",
     navLabels: {
       dashboard: "Overview",
       atmList: "ATM list",
@@ -269,9 +275,9 @@ const roleCardTargets = {
   ],
   manager: [
     { target: "atm-list",  hint: "View ATM queue" },
-    { target: "alerts",    hint: "Review anomaly groups" },
+    { target: "alerts",    hint: "Review flagged issues" },
     { target: "alerts",    hint: "Review queue pressure" },
-    { target: "data-flow", hint: "Inspect data flow" },
+    { target: "action-center", hint: "Record manager action" },
   ],
   ops: [
     { target: "atm-list",      hint: "View ATM list" },
@@ -291,6 +297,7 @@ const validScreenIds = new Set(activeRoleConfig.allowedScreens);
 let currentAtmId = null;
 let currentPrioritySummary = null;
 let currentRecommendations = [];
+let currentActionContext = null;
 
 function setLargeUi(isEnabled) {
   document.body.classList.toggle("large-ui", isEnabled);
@@ -539,6 +546,15 @@ function setInputPlaceholder(selector, value) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function applyRoleDashboardCopy() {
   setTextContent("#dashboard-title", activeRoleConfig.dashboardTitle);
   setTextContent("#dashboard-title + p", activeRoleConfig.dashboardDescription);
@@ -563,6 +579,7 @@ function applyRoleDashboardCopy() {
   const screenContent = roleScreenContent[dashboardRole] || roleScreenContent.ops;
   setTextContent(".header-copy", screenContent.headerCopy);
   setInputPlaceholder('.search-field input[type="search"]', screenContent.searchPlaceholder);
+  setTextContent("#search-helper-text", screenContent.searchHelper || "Search across the dashboard.");
   setTextContent("#list-title", screenContent.listTitle);
   setTextContent("#list-title + p", screenContent.listDescription);
   setTextContent("#filters-title", screenContent.filtersTitle);
@@ -690,6 +707,7 @@ function filterAnomalyItems(query) {
   const critItems = document.querySelectorAll("#alerts-critical-list li");
   const warnItems = document.querySelectorAll("#alerts-warning-list li");
   const recItems = document.querySelectorAll("#rec-list .rec-card");
+  const incidentItems = document.querySelectorAll("#incidents-list li");
   let matchCount = 0;
 
   [critItems, warnItems].forEach((items) => {
@@ -705,12 +723,20 @@ function filterAnomalyItems(query) {
     const text = normalizeSearchValue(card.textContent);
     const isMatch = !query || text.includes(query);
     card.hidden = !isMatch;
+    if (isMatch) matchCount += 1;
+  });
+
+  incidentItems.forEach((item) => {
+    const text = normalizeSearchValue(item.textContent);
+    const isMatch = !query || text.includes(query);
+    item.hidden = !isMatch;
+    if (isMatch) matchCount += 1;
   });
 
   return matchCount;
 }
 
-function setSearchResultCount(count, context) {
+function setSearchResultCount(count, context, query = "") {
   const el = document.getElementById("search-result-count");
   if (!el) return;
   if (!context) {
@@ -721,7 +747,7 @@ function setSearchResultCount(count, context) {
   el.hidden = false;
   el.textContent = count > 0
     ? `${count} result${count !== 1 ? "s" : ""} in ${context}`
-    : `No results found`;
+    : `No matches for "${query}". Try an ATM ID, branch, issue type, or source.`;
 }
 
 function clearSearchFilters() {
@@ -759,7 +785,6 @@ function applySearch(query) {
 
   if (!normalizedQuery) {
     clearSearchFilters();
-    if (globalSearchInput) globalSearchInput.setCustomValidity("");
     return;
   }
 
@@ -767,8 +792,7 @@ function applySearch(query) {
   const atmMatchCount = filterAtmRows(normalizedQuery);
   if (atmMatchCount && validScreenIds.has("atm-list")) {
     navigateToScreen("atm-list");
-    setSearchResultCount(atmMatchCount, "ATM list");
-    if (globalSearchInput) globalSearchInput.setCustomValidity("");
+    setSearchResultCount(atmMatchCount, "ATM list", normalizedQuery);
     return;
   }
 
@@ -777,8 +801,7 @@ function applySearch(query) {
   const alertsScreenId = validScreenIds.has("alerts") ? "alerts" : null;
   if (anomalyMatchCount && alertsScreenId) {
     navigateToScreen(alertsScreenId);
-    setSearchResultCount(anomalyMatchCount, "anomaly groups");
-    if (globalSearchInput) globalSearchInput.setCustomValidity("");
+    setSearchResultCount(anomalyMatchCount, "issues, incidents, and recommendations", normalizedQuery);
     return;
   }
 
@@ -786,16 +809,11 @@ function applySearch(query) {
   const targetScreenId = findBestSearchTarget(normalizedQuery);
   if (targetScreenId) {
     navigateToScreen(targetScreenId);
-    setSearchResultCount(1, document.querySelector(`[data-screen-target="${targetScreenId}"] span`)?.textContent || targetScreenId);
-    if (globalSearchInput) globalSearchInput.setCustomValidity("");
+    setSearchResultCount(1, document.querySelector(`[data-screen-target="${targetScreenId}"] span`)?.textContent || targetScreenId, normalizedQuery);
     return;
   }
 
-  setSearchResultCount(0, "dashboard");
-  if (globalSearchInput) {
-    globalSearchInput.setCustomValidity("No matching content found.");
-    globalSearchInput.reportValidity();
-  }
+  setSearchResultCount(0, "dashboard", normalizedQuery);
 }
 
 function configureRoleView() {
@@ -900,7 +918,6 @@ if (accessibilityToggle) {
 
 if (globalSearchInput) {
   globalSearchInput.addEventListener("input", (event) => {
-    if (globalSearchInput.validity.customError) globalSearchInput.setCustomValidity("");
     if (!event.target.value.trim()) clearSearchFilters();
     else applySearch(event.target.value);
   });
@@ -946,22 +963,94 @@ document.querySelectorAll(".filter-chip").forEach((chip) => {
   });
 });
 
+function getQuickActionLabels() {
+  if (dashboardRole === "manager") {
+    return {
+      primary: "Assign for review",
+      secondary: "Acknowledge issue",
+    };
+  }
+
+  return {
+    primary: "Escalate to field support",
+    secondary: "Acknowledge issue",
+  };
+}
+
+async function recordAction(payload) {
+  const response = await fetch("/api/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+function populateActionHistory(actions) {
+  const list = document.getElementById("action-history-list");
+  if (!list) return;
+
+  if (!actions || actions.length === 0) {
+    list.innerHTML = "<li>No actions recorded yet.</li>";
+    return;
+  }
+
+  list.innerHTML = actions
+    .map((action) => {
+      const atm = action.atm_id ? ` / ${escapeHtml(action.atm_id)}` : "";
+      const anomaly = action.anomaly_name ? ` - ${escapeHtml(action.anomaly_name)}` : "";
+      const notes = action.notes ? `<br><span class=\"metric-subnote\">${escapeHtml(action.notes)}</span>` : "";
+      const owner = action.username || action.user_role || "team";
+      return `<li><strong>${escapeHtml(action.action_label)}</strong> on ${escapeHtml(owner)}${atm}${anomaly}<br><span class=\"metric-subnote\">${escapeHtml((action.created_at || "").slice(0, 16))}</span>${notes}</li>`;
+    })
+    .join("");
+}
+
 // Confirm action button — dynamic based on priority summary context
 if (confirmActionButton && confirmationCard) {
-  confirmActionButton.addEventListener("click", () => {
+  confirmActionButton.addEventListener("click", async () => {
     const selected = document.querySelector('.radio-card input[type="radio"]:checked');
     const selectedLabel = selected
       ? selected.closest(".radio-card").querySelector("strong").textContent
       : "Review and monitor";
-    const atm = currentAtmId || (currentPrioritySummary && currentPrioritySummary.atm_id) || "affected ATM";
-    const anomaly = currentPrioritySummary ? currentPrioritySummary.anomaly_name || "active anomaly" : "active anomaly";
+    const actionContext = currentActionContext || currentPrioritySummary || {};
+    const atm = currentAtmId || actionContext.atm_id || "affected ATM";
+    const anomaly = actionContext.anomaly_name || "active anomaly";
     const note = document.getElementById("action-textarea");
     const noteText = note && note.value.trim() ? note.value.trim() : "No additional notes.";
-    confirmationCard.innerHTML = `
-      <p><strong>Action recorded:</strong> ${selectedLabel}</p>
-      <p>ATM: ${atm} — ${anomaly}.</p>
-      <p class="metric-subnote" style="margin-top:0.5rem;">Operator note: ${noteText}</p>`;
-    confirmationCard.focus();
+    confirmActionButton.disabled = true;
+
+    try {
+      const result = await recordAction({
+        action_label: selectedLabel,
+        notes: noteText === "No additional notes." ? "" : noteText,
+        atm_id: atm === "affected ATM" ? "" : atm,
+        anomaly_type: actionContext.anomaly_type || "",
+        anomaly_name: anomaly,
+      });
+
+      if (result.status !== "ok") {
+        confirmationCard.innerHTML = `<p><strong>Unable to record action.</strong></p><p class=\"metric-subnote\">${escapeHtml(result.reason || "Try again.")}</p>`;
+        confirmationCard.focus();
+        return;
+      }
+
+      confirmationCard.innerHTML = `
+        <p><strong>Action recorded:</strong> ${escapeHtml(selectedLabel)}</p>
+        <p>ATM: ${escapeHtml(atm)} - ${escapeHtml(anomaly)}.</p>
+        <p class="metric-subnote" style="margin-top:0.5rem;">Note: ${escapeHtml(noteText)}</p>`;
+      confirmationCard.focus();
+
+      try {
+        const history = await fetch("/api/actions").then((r) => r.json());
+        if (history.status === "ok") populateActionHistory(history.actions);
+      } catch {}
+    } catch (error) {
+      confirmationCard.innerHTML = "<p><strong>Unable to record action.</strong></p><p class=\"metric-subnote\">Please try again.</p>";
+      confirmationCard.focus();
+    } finally {
+      confirmActionButton.disabled = false;
+    }
   });
 }
 
@@ -1023,7 +1112,7 @@ async function fetchDashboardData() {
   );
 
   try {
-    const [summary, scale, snapshot, atmList, alerts, trend, sourceChecks, prioritySummary, winosTrend, mlSummary, incidents, recommendations, feedbackHistory] =
+    const [summary, scale, snapshot, atmList, alerts, trend, sourceChecks, prioritySummary, winosTrend, mlSummary, incidents, recommendations, feedbackHistory, actions] =
       await Promise.all([
         fetch(buildApiUrl("/api/summary")).then((r) => r.json()),
         fetch(buildApiUrl("/api/scale")).then((r) => r.json()),
@@ -1038,6 +1127,7 @@ async function fetchDashboardData() {
         fetch("/api/incidents").then((r) => r.json()),
         fetch("/api/recommendations").then((r) => r.json()),
         fetch("/api/feedback-history").then((r) => r.json()),
+        fetch("/api/actions").then((r) => r.json()),
       ]);
 
     if (summary.status === "ok") populateSummary(summary);
@@ -1077,10 +1167,11 @@ async function fetchDashboardData() {
       }
     }
     if (feedbackHistory.status === "ok") populateFeedbackHistory(feedbackHistory);
+    if (actions.status === "ok") populateActionHistory(actions.actions);
     if (prioritySummary.status === "ok") {
       currentPrioritySummary = prioritySummary;
       populatePrioritySummary(prioritySummary);
-      if (dashboardRole === "ops") populateActionCenter(prioritySummary);
+      if (validScreenIds.has("action-center")) populateActionCenter(prioritySummary);
     }
     populateSettingsAccount();
   } catch (err) {
@@ -1461,6 +1552,8 @@ function populatePrioritySummary(data) {
 function populateActionCenter(data) {
   if (!data || !data.anomaly_name) return;
 
+  currentActionContext = data;
+
   const atm = data.atm_id && data.atm_id !== "N/A" ? data.atm_id : "affected ATM";
   const recommendations = [
     {
@@ -1745,6 +1838,7 @@ function populateSettingsSourceList(sources) {
 function populateRecommendations(recs) {
   const list = document.getElementById("rec-list");
   const pill = document.getElementById("rec-summary-pill");
+  const quickActionLabels = getQuickActionLabels();
 
   if (dashboardRole === "admin") {
     const h3 = document.getElementById("rec-panel-title");
@@ -1775,6 +1869,15 @@ function populateRecommendations(recs) {
       const stepsHtml = r.steps
         .map((s, i) => `<li>${s}</li>`)
         .join("");
+      const quickActionsHtml = dashboardRole === "admin"
+        ? ""
+        : `
+        <div class="rec-actions" role="group" aria-label="Recommendation actions">
+          <button class="button quick-action-btn" type="button" data-action-label="${quickActionLabels.primary}" data-anomaly-type="${r.anomaly_type}" data-anomaly-name="${r.anomaly_name}" data-atm-id="${r.atm_id || ""}">${quickActionLabels.primary}</button>
+          <button class="button-secondary quick-action-btn" type="button" data-action-label="${quickActionLabels.secondary}" data-anomaly-type="${r.anomaly_type}" data-anomaly-name="${r.anomaly_name}" data-atm-id="${r.atm_id || ""}">${quickActionLabels.secondary}</button>
+          <button class="text-button open-action-center-btn" type="button" data-anomaly-type="${r.anomaly_type}" data-anomaly-name="${r.anomaly_name}" data-atm-id="${r.atm_id || ""}">Open action center</button>
+        </div>
+        <p class="quick-action-status" aria-live="polite"></p>`;
       return `
       <li class="rec-card" data-anomaly-type="${r.anomaly_type}" data-atm-id="${r.atm_id || ""}">
         <div class="rec-card-header">
@@ -1801,11 +1904,13 @@ function populateRecommendations(recs) {
             </button>
           </div>
         </div>
+        ${quickActionsHtml}
       </li>`;
     })
     .join("");
 
   wireFeedbackButtons();
+  wireRecommendationActionButtons();
 }
 
 function wireFeedbackButtons() {
@@ -1835,6 +1940,67 @@ function wireFeedbackButtons() {
           if (hist.status === "ok") populateFeedbackHistory(hist);
         } catch {}
       }
+    });
+  });
+}
+
+function wireRecommendationActionButtons() {
+  document.querySelectorAll(".quick-action-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const statusNode = btn.closest(".rec-card")?.querySelector(".quick-action-status");
+      btn.disabled = true;
+
+      try {
+        const result = await recordAction({
+          action_label: btn.dataset.actionLabel || "Review issue",
+          anomaly_type: btn.dataset.anomalyType || "",
+          anomaly_name: btn.dataset.anomalyName || "",
+          atm_id: btn.dataset.atmId || "",
+          notes: "",
+        });
+
+        if (statusNode) {
+          statusNode.textContent = result.status === "ok"
+            ? `${btn.dataset.actionLabel} recorded.`
+            : `Unable to record action: ${result.reason || "try again"}.`;
+        }
+
+        if (result.status === "ok") {
+          try {
+            const history = await fetch("/api/actions").then((r) => r.json());
+            if (history.status === "ok") populateActionHistory(history.actions);
+          } catch {}
+        }
+      } catch {
+        if (statusNode) statusNode.textContent = "Unable to record action right now.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll(".open-action-center-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentActionContext = {
+        anomaly_type: btn.dataset.anomalyType || "",
+        anomaly_name: btn.dataset.anomalyName || "",
+        atm_id: btn.dataset.atmId || "",
+      };
+
+      if (!validScreenIds.has("action-center")) {
+        return;
+      }
+
+      const matchingRecommendation = currentRecommendations.find(
+        (rec) => rec.anomaly_type === currentActionContext.anomaly_type && (rec.atm_id || "") === currentActionContext.atm_id
+      );
+      if (matchingRecommendation) {
+        populateActionCenterFromRec([
+          matchingRecommendation,
+          ...currentRecommendations.filter((rec) => rec !== matchingRecommendation),
+        ]);
+      }
+      navigateToScreen("action-center");
     });
   });
 }
@@ -1896,6 +2062,7 @@ function populateFeedbackHistory(data) {
 function populateActionCenterFromRec(recs) {
   if (!recs || recs.length === 0) return;
   const top = recs[0];
+  currentActionContext = top;
   const atm = top.atm_id && top.atm_id !== "N/A" ? top.atm_id : "affected ATM";
 
   const recommendations = [
