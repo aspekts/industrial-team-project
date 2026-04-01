@@ -6,7 +6,16 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, render_template_string, request, session, url_for
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    render_template_string,
+    request,
+    session,
+    url_for,
+)
 
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[2]))
@@ -48,8 +57,12 @@ def get_dashboard_endpoint(role: str) -> str:
 
 def render_dashboard_view(role: str):
     dashboard_html = (DASHBOARD_DIR / "index.html").read_text(encoding="utf-8")
-    dashboard_html = dashboard_html.replace('href="styles.css"', 'href="/styles.css"', 1)
-    dashboard_html = dashboard_html.replace('<script src="app.js"></script>', '<script src="/app.js"></script>', 1)
+    dashboard_html = dashboard_html.replace(
+        'href="styles.css"', 'href="/styles.css"', 1
+    )
+    dashboard_html = dashboard_html.replace(
+        '<script src="app.js"></script>', '<script src="/app.js"></script>', 1
+    )
     dashboard_html = dashboard_html.replace(
         "<body>",
         f'<body data-dashboard-role="{role}" data-dashboard-role-label="{ROLE_LABELS[role]}">',
@@ -135,7 +148,9 @@ def create_app(db_path: Path | None = None) -> Flask:
                 error = "Select a valid role to continue."
             elif get_user_by_username(username, Path(app.config["AUTH_DB_PATH"])):
                 error = "That username is already taken."
-            elif not create_user(username, password, role, Path(app.config["AUTH_DB_PATH"])):
+            elif not create_user(
+                username, password, role, Path(app.config["AUTH_DB_PATH"])
+            ):
                 error = "Unable to create account."
             else:
                 return redirect(url_for("login", signup="success", username=username))
@@ -255,6 +270,26 @@ def create_app(db_path: Path | None = None) -> Flask:
         )
         return cur.fetchone() is not None
 
+    def _ensure_action_log_table(conn):
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS action_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                anomaly_type TEXT,
+                anomaly_name TEXT,
+                atm_id TEXT,
+                action_label TEXT NOT NULL,
+                notes TEXT,
+                user_role TEXT,
+                username TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_action_log_created_at ON action_log (created_at DESC)"
+        )
+
     def _get_filter_date():
         raw_value = request.args.get("date", "").strip()
         if not raw_value:
@@ -266,7 +301,9 @@ def create_app(db_path: Path | None = None) -> Flask:
             return None
 
     def _invalid_date_response():
-        return jsonify({"status": "invalid", "reason": "date must be in YYYY-MM-DD format"}), 400
+        return jsonify(
+            {"status": "invalid", "reason": "date must be in YYYY-MM-DD format"}
+        ), 400
 
     @app.get("/api/summary")
     def api_summary():
@@ -292,7 +329,9 @@ def create_app(db_path: Path | None = None) -> Flask:
                         (filter_date,),
                     ).fetchone()
                 else:
-                    row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
+                    row = conn.execute(
+                        "SELECT COUNT(DISTINCT atm_id) FROM ATMA"
+                    ).fetchone()
                 observed_atms = row[0] if row else 0
 
             app_errors = 0
@@ -401,7 +440,9 @@ def create_app(db_path: Path | None = None) -> Flask:
                         (filter_date,),
                     ).fetchone()
                 else:
-                    row = conn.execute("SELECT COUNT(DISTINCT atm_id) FROM ATMA").fetchone()
+                    row = conn.execute(
+                        "SELECT COUNT(DISTINCT atm_id) FROM ATMA"
+                    ).fetchone()
                 atms = row[0] if row else 0
 
             time_window = "N/A"
@@ -461,7 +502,9 @@ def create_app(db_path: Path | None = None) -> Flask:
         with _connect() as conn:
             for name in source_names:
                 if not _table_exists(conn, name):
-                    results.append({"source": name, "signal": "absent", "status": "No data"})
+                    results.append(
+                        {"source": name, "signal": "absent", "status": "No data"}
+                    )
                     continue
 
                 if filter_date:
@@ -563,7 +606,11 @@ def create_app(db_path: Path | None = None) -> Flask:
 
             atms.sort(
                 key=lambda a: (
-                    0 if a["status"] == "critical" else 1 if a["status"] == "warning" else 2
+                    0
+                    if a["status"] == "critical"
+                    else 1
+                    if a["status"] == "warning"
+                    else 2
                 )
             )
 
@@ -606,7 +653,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
         critical = []
         warning = []
-        for anomaly_type, anomaly_name, severity, source, atm_id, ts, desc, count in rows:
+        for (
+            anomaly_type,
+            anomaly_name,
+            severity,
+            source,
+            atm_id,
+            ts,
+            desc,
+            count,
+        ) in rows:
             entry = {
                 "anomaly_type": anomaly_type,
                 "anomaly_name": anomaly_name,
@@ -622,7 +678,14 @@ def create_app(db_path: Path | None = None) -> Flask:
             else:
                 warning.append(entry)
 
-        return jsonify({"status": "ok", "filter_date": filter_date, "critical": critical, "warning": warning})
+        return jsonify(
+            {
+                "status": "ok",
+                "filter_date": filter_date,
+                "critical": critical,
+                "warning": warning,
+            }
+        )
 
     @app.get("/api/trend")
     def api_trend():
@@ -632,7 +695,9 @@ def create_app(db_path: Path | None = None) -> Flask:
 
         with _connect() as conn:
             if not _table_exists(conn, "ATMA"):
-                return jsonify({"status": "ok", "points": [], "peak_hour": None, "peak_errors": 0})
+                return jsonify(
+                    {"status": "ok", "points": [], "peak_hour": None, "peak_errors": 0}
+                )
 
             rows = conn.execute(
                 """
@@ -647,14 +712,20 @@ def create_app(db_path: Path | None = None) -> Flask:
                 """
             ).fetchall()
 
-        points = [{"hour": row[0], "total": row[1], "errors": row[2] or 0} for row in rows if row[0]]
+        points = [
+            {"hour": row[0], "total": row[1], "errors": row[2] or 0}
+            for row in rows
+            if row[0]
+        ]
         peak = max(points, key=lambda p: p["errors"], default=None)
-        return jsonify({
-            "status": "ok",
-            "points": points,
-            "peak_hour": peak["hour"] if peak else None,
-            "peak_errors": peak["errors"] if peak else 0,
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "points": points,
+                "peak_hour": peak["hour"] if peak else None,
+                "peak_errors": peak["errors"] if peak else 0,
+            }
+        )
 
     @app.get("/api/source-checks")
     def api_source_checks():
@@ -669,32 +740,54 @@ def create_app(db_path: Path | None = None) -> Flask:
                     "SELECT COUNT(*) FROM KAFK WHERE failure_count > 0"
                 ).fetchone()
                 kafk_failures = row[0] if row else 0
-                checks.append({
-                    "key": "kafk_failures",
-                    "label": "KAFK transaction failures",
-                    "value": kafk_failures,
-                    "detail": f"{kafk_failures} windows with failure_count > 0" if kafk_failures else "No failure windows detected",
-                    "severity": "critical" if kafk_failures > 0 else "ok",
-                })
+                checks.append(
+                    {
+                        "key": "kafk_failures",
+                        "label": "KAFK transaction failures",
+                        "value": kafk_failures,
+                        "detail": f"{kafk_failures} windows with failure_count > 0"
+                        if kafk_failures
+                        else "No failure windows detected",
+                        "severity": "critical" if kafk_failures > 0 else "ok",
+                    }
+                )
             else:
-                checks.append({"key": "kafk_failures", "label": "KAFK transaction failures",
-                                "value": 0, "detail": "KAFK table not present", "severity": "absent"})
+                checks.append(
+                    {
+                        "key": "kafk_failures",
+                        "label": "KAFK transaction failures",
+                        "value": 0,
+                        "detail": "KAFK table not present",
+                        "severity": "absent",
+                    }
+                )
 
             if _table_exists(conn, "TERM"):
                 row = conn.execute(
                     "SELECT COUNT(*) FROM TERM WHERE log_level IN ('ERROR','FATAL')"
                 ).fetchone()
                 term_errors = row[0] if row else 0
-                checks.append({
-                    "key": "term_errors",
-                    "label": "Terminal handler runtime",
-                    "value": term_errors,
-                    "detail": f"{term_errors} ERROR/FATAL events in terminal handler" if term_errors else "No error-level events detected",
-                    "severity": "warning" if term_errors > 0 else "ok",
-                })
+                checks.append(
+                    {
+                        "key": "term_errors",
+                        "label": "Terminal handler runtime",
+                        "value": term_errors,
+                        "detail": f"{term_errors} ERROR/FATAL events in terminal handler"
+                        if term_errors
+                        else "No error-level events detected",
+                        "severity": "warning" if term_errors > 0 else "ok",
+                    }
+                )
             else:
-                checks.append({"key": "term_errors", "label": "Terminal handler runtime",
-                                "value": 0, "detail": "TERM table not present", "severity": "absent"})
+                checks.append(
+                    {
+                        "key": "term_errors",
+                        "label": "Terminal handler runtime",
+                        "value": 0,
+                        "detail": "TERM table not present",
+                        "severity": "absent",
+                    }
+                )
 
             if _table_exists(conn, "WINOS"):
                 row = conn.execute(
@@ -702,16 +795,27 @@ def create_app(db_path: Path | None = None) -> Flask:
                 ).fetchone()
                 pressure_count = row[0] if row else 0
                 peak_cpu = int(row[1]) if row and row[1] else 0
-                checks.append({
-                    "key": "winos_pressure",
-                    "label": "Windows host health",
-                    "value": pressure_count,
-                    "detail": f"{pressure_count} samples above 80% CPU (peak {peak_cpu}%)" if pressure_count else "CPU within normal range",
-                    "severity": "critical" if pressure_count > 0 else "ok",
-                })
+                checks.append(
+                    {
+                        "key": "winos_pressure",
+                        "label": "Windows host health",
+                        "value": pressure_count,
+                        "detail": f"{pressure_count} samples above 80% CPU (peak {peak_cpu}%)"
+                        if pressure_count
+                        else "CPU within normal range",
+                        "severity": "critical" if pressure_count > 0 else "ok",
+                    }
+                )
             else:
-                checks.append({"key": "winos_pressure", "label": "Windows host health",
-                                "value": 0, "detail": "WINOS table not present", "severity": "absent"})
+                checks.append(
+                    {
+                        "key": "winos_pressure",
+                        "label": "Windows host health",
+                        "value": 0,
+                        "detail": "WINOS table not present",
+                        "severity": "absent",
+                    }
+                )
 
         return jsonify({"status": "ok", "checks": checks})
 
@@ -723,7 +827,9 @@ def create_app(db_path: Path | None = None) -> Flask:
 
         with _connect() as conn:
             if not _table_exists(conn, "analysis_detections"):
-                return jsonify({"status": "ok", "has_critical": False, "anomaly_name": None})
+                return jsonify(
+                    {"status": "ok", "has_critical": False, "anomaly_name": None}
+                )
 
             top_row = conn.execute(
                 """
@@ -748,9 +854,20 @@ def create_app(db_path: Path | None = None) -> Flask:
                 ).fetchone()
 
             if not top_row:
-                return jsonify({"status": "ok", "has_critical": False, "anomaly_name": None})
+                return jsonify(
+                    {"status": "ok", "has_critical": False, "anomaly_name": None}
+                )
 
-            anomaly_type, anomaly_name, severity, source, atm_id, ts, desc, event_count = top_row
+            (
+                anomaly_type,
+                anomaly_name,
+                severity,
+                source,
+                atm_id,
+                ts,
+                desc,
+                event_count,
+            ) = top_row
 
             corr_row = conn.execute(
                 "SELECT GROUP_CONCAT(DISTINCT source) FROM analysis_detections WHERE atm_id = ?",
@@ -763,25 +880,27 @@ def create_app(db_path: Path | None = None) -> Flask:
             ).fetchone()
             total_critical = crit_count[0] if crit_count else 0
 
-        return jsonify({
-            "status": "ok",
-            "has_critical": severity == "CRITICAL",
-            "anomaly_name": anomaly_name,
-            "anomaly_type": anomaly_type,
-            "severity": severity,
-            "source": source,
-            "atm_id": atm_id or "N/A",
-            "detection_timestamp": ts,
-            "description": desc or "",
-            "event_count": event_count or 0,
-            "correlated_sources": correlated_sources,
-            "total_critical": total_critical,
-            "primary_signal": f"{anomaly_name} ({anomaly_type}) — {source}",
-            "secondary_signal": f"{event_count} events on {atm_id or 'multiple ATMs'} since {(ts or '')[:10]}",
-            "impact": f"{total_critical} critical detection group{'s' if total_critical != 1 else ''} active",
-            "next_review_area": f"Cross-reference {correlated_sources} for {atm_id or 'affected ATMs'}",
-            "next_best_action": f"Open anomaly groups for {atm_id or 'affected ATMs'} and review {source} evidence",
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "has_critical": severity == "CRITICAL",
+                "anomaly_name": anomaly_name,
+                "anomaly_type": anomaly_type,
+                "severity": severity,
+                "source": source,
+                "atm_id": atm_id or "N/A",
+                "detection_timestamp": ts,
+                "description": desc or "",
+                "event_count": event_count or 0,
+                "correlated_sources": correlated_sources,
+                "total_critical": total_critical,
+                "primary_signal": f"{anomaly_name} ({anomaly_type}) — {source}",
+                "secondary_signal": f"{event_count} events on {atm_id or 'multiple ATMs'} since {(ts or '')[:10]}",
+                "impact": f"{total_critical} critical detection group{'s' if total_critical != 1 else ''} active",
+                "next_review_area": f"Cross-reference {correlated_sources} for {atm_id or 'affected ATMs'}",
+                "next_best_action": f"Open anomaly groups for {atm_id or 'affected ATMs'} and review {source} evidence",
+            }
+        )
 
     @app.get("/api/me")
     def api_me():
@@ -799,7 +918,9 @@ def create_app(db_path: Path | None = None) -> Flask:
 
         with _connect() as conn:
             if not _table_exists(conn, "WINOS"):
-                return jsonify({"status": "ok", "points": [], "peak_hour": None, "peak_cpu": 0})
+                return jsonify(
+                    {"status": "ok", "points": [], "peak_hour": None, "peak_cpu": 0}
+                )
 
             rows = conn.execute(
                 """
@@ -814,17 +935,23 @@ def create_app(db_path: Path | None = None) -> Flask:
             ).fetchall()
 
         points = [
-            {"hour": row[0], "avg_cpu": round(row[1] or 0, 1), "max_cpu": round(row[2] or 0, 1)}
+            {
+                "hour": row[0],
+                "avg_cpu": round(row[1] or 0, 1),
+                "max_cpu": round(row[2] or 0, 1),
+            }
             for row in rows
             if row[0]
         ]
         peak = max(points, key=lambda p: p["max_cpu"], default=None)
-        return jsonify({
-            "status": "ok",
-            "points": points,
-            "peak_hour": peak["hour"] if peak else None,
-            "peak_cpu": peak["max_cpu"] if peak else 0,
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "points": points,
+                "peak_hour": peak["hour"] if peak else None,
+                "peak_cpu": peak["max_cpu"] if peak else 0,
+            }
+        )
 
     @app.get("/api/atm-detail/<atm_id>")
     def api_atm_detail(atm_id):
@@ -873,8 +1000,14 @@ def create_app(db_path: Path | None = None) -> Flask:
                     (atm_id,),
                 ).fetchall()
                 detections = [
-                    {"anomaly_type": r[0], "anomaly_name": r[1], "severity": r[2],
-                     "source": r[3], "description": r[4], "event_count": r[5]}
+                    {
+                        "anomaly_type": r[0],
+                        "anomaly_name": r[1],
+                        "severity": r[2],
+                        "source": r[3],
+                        "description": r[4],
+                        "event_count": r[5],
+                    }
                     for r in det_rows
                 ]
 
@@ -922,25 +1055,32 @@ def create_app(db_path: Path | None = None) -> Flask:
 
             all_sources = list({d["source"] for d in detections})
 
-        return jsonify({
-            "status": "ok",
-            "atm_id": atm_id,
-            "location_code": location_code or "N/A",
-            "last_update": last_ts,
-            "atm_status": atm_status or "Unknown",
-            "error_count": error_count or 0,
-            "hw_alerts": atmh_count,
-            "top_detection": detections[0] if detections else None,
-            "detections": detections,
-            "kafk_summary": kafk_summary,
-            "winos_summary": winos_summary,
-            "correlated_sources": ", ".join(all_sources) if all_sources else "N/A",
-            "timeline": [
-                {"timestamp": r[0], "event_type": r[1], "component": r[2],
-                 "message": r[3], "error_code": r[4]}
-                for r in timeline_rows
-            ],
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "atm_id": atm_id,
+                "location_code": location_code or "N/A",
+                "last_update": last_ts,
+                "atm_status": atm_status or "Unknown",
+                "error_count": error_count or 0,
+                "hw_alerts": atmh_count,
+                "top_detection": detections[0] if detections else None,
+                "detections": detections,
+                "kafk_summary": kafk_summary,
+                "winos_summary": winos_summary,
+                "correlated_sources": ", ".join(all_sources) if all_sources else "N/A",
+                "timeline": [
+                    {
+                        "timestamp": r[0],
+                        "event_type": r[1],
+                        "component": r[2],
+                        "message": r[3],
+                        "error_code": r[4],
+                    }
+                    for r in timeline_rows
+                ],
+            }
+        )
 
     @app.get("/api/incidents")
     def api_incidents():
@@ -958,10 +1098,23 @@ def create_app(db_path: Path | None = None) -> Flask:
                 ORDER BY CASE WHEN severity='CRITICAL' THEN 0 ELSE 1 END, earliest_ts DESC
                 """
             ).fetchall()
-        cols = ["incident_id", "correlation_id", "atm_ids", "sources", "anomaly_types",
-                "severity", "event_count", "earliest_ts", "latest_ts", "description", "strategy"]
+        cols = [
+            "incident_id",
+            "correlation_id",
+            "atm_ids",
+            "sources",
+            "anomaly_types",
+            "severity",
+            "event_count",
+            "earliest_ts",
+            "latest_ts",
+            "description",
+            "strategy",
+        ]
         incidents = [dict(zip(cols, r)) for r in rows]
-        return jsonify({"status": "ok", "incidents": incidents, "total": len(incidents)})
+        return jsonify(
+            {"status": "ok", "incidents": incidents, "total": len(incidents)}
+        )
 
     @app.get("/api/ml-summary")
     def api_ml_summary():
@@ -970,20 +1123,33 @@ def create_app(db_path: Path | None = None) -> Flask:
             return jsonify({"status": "unavailable"})
         with _connect() as conn:
             if not _table_exists(conn, "ml_anomaly_scores"):
-                return jsonify({"status": "ok", "total_scored": 0, "total_anomalies": 0, "model_version": None, "sources": []})
+                return jsonify(
+                    {
+                        "status": "ok",
+                        "total_scored": 0,
+                        "total_anomalies": 0,
+                        "model_version": None,
+                        "sources": [],
+                    }
+                )
             row = conn.execute(
                 "SELECT COUNT(*), SUM(is_anomaly), MAX(model_version) FROM ml_anomaly_scores"
             ).fetchone()
             source_rows = conn.execute(
                 "SELECT source, COUNT(*), SUM(is_anomaly) FROM ml_anomaly_scores GROUP BY source"
             ).fetchall()
-        return jsonify({
-            "status": "ok",
-            "total_scored": row[0] or 0,
-            "total_anomalies": int(row[1] or 0),
-            "model_version": row[2],
-            "sources": [{"source": r[0], "scored": r[1], "anomalies": int(r[2] or 0)} for r in source_rows],
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "total_scored": row[0] or 0,
+                "total_anomalies": int(row[1] or 0),
+                "model_version": row[2],
+                "sources": [
+                    {"source": r[0], "scored": r[1], "anomalies": int(r[2] or 0)}
+                    for r in source_rows
+                ],
+            }
+        )
 
     @app.get("/api/taxonomy")
     def api_taxonomy():
@@ -997,10 +1163,12 @@ def create_app(db_path: Path | None = None) -> Flask:
             rows = conn.execute(
                 "SELECT * FROM anomaly_taxonomy ORDER BY discovery_method, anomaly_type"
             ).fetchall()
-        return jsonify({
-            "status": "ok",
-            "entries": [dict(r) for r in rows],
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "entries": [dict(r) for r in rows],
+            }
+        )
 
     @app.get("/api/recommendations")
     def api_recommendations():
@@ -1012,6 +1180,7 @@ def create_app(db_path: Path | None = None) -> Flask:
             from src.analysis.recommendations import RecommendationEngine
         except ImportError:
             import sys
+
             sys.path.insert(0, str(PROJECT_ROOT))
             from src.analysis.recommendations import RecommendationEngine
 
@@ -1029,8 +1198,13 @@ def create_app(db_path: Path | None = None) -> Flask:
             ).fetchall()
 
         detections = [
-            {"anomaly_type": r[0], "anomaly_name": r[1], "severity": r[2],
-             "source": r[3], "atm_id": r[4]}
+            {
+                "anomaly_type": r[0],
+                "anomaly_name": r[1],
+                "severity": r[2],
+                "source": r[3],
+                "atm_id": r[4],
+            }
             for r in rows
         ]
         recommendations = engine.get_all_recommendations(detections)
@@ -1049,18 +1223,23 @@ def create_app(db_path: Path | None = None) -> Flask:
         user_role = session.get("role", "")
 
         if not anomaly_type or not vote:
-            return jsonify({"status": "error", "reason": "anomaly_type and vote are required"}), 400
+            return jsonify(
+                {"status": "error", "reason": "anomaly_type and vote are required"}
+            ), 400
 
         try:
             from src.analysis.recommendations import RecommendationEngine
         except ImportError:
             import sys
+
             sys.path.insert(0, str(PROJECT_ROOT))
             from src.analysis.recommendations import RecommendationEngine
 
         engine = RecommendationEngine(str(db_file))
         if not engine.record_feedback(anomaly_type, atm_id, vote, user_role):
-            return jsonify({"status": "error", "reason": "invalid vote or unknown anomaly type"}), 400
+            return jsonify(
+                {"status": "error", "reason": "invalid vote or unknown anomaly type"}
+            ), 400
 
         adjusted_confidence = engine.get_adjusted_confidence(anomaly_type)
         return jsonify({"status": "ok", "adjusted_confidence": adjusted_confidence})
@@ -1075,15 +1254,88 @@ def create_app(db_path: Path | None = None) -> Flask:
             from src.analysis.recommendations import RecommendationEngine
         except ImportError:
             import sys
+
             sys.path.insert(0, str(PROJECT_ROOT))
             from src.analysis.recommendations import RecommendationEngine
 
         engine = RecommendationEngine(str(db_file))
-        return jsonify({
-            "status": "ok",
-            "history": engine.get_feedback_history(20),
-            "stats": engine.get_feedback_stats(),
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "history": engine.get_feedback_history(20),
+                "stats": engine.get_feedback_stats(),
+            }
+        )
+
+    @app.get("/api/actions")
+    def api_actions():
+        with _connect() as conn:
+            _ensure_action_log_table(conn)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT anomaly_type, anomaly_name, atm_id, action_label, notes, user_role, username, created_at
+                FROM action_log
+                ORDER BY created_at DESC, id DESC
+                LIMIT 20
+                """
+            ).fetchall()
+
+        return jsonify({"status": "ok", "actions": [dict(row) for row in rows]})
+
+    @app.post("/api/actions")
+    def api_record_action():
+        user_role = session.get("role", "")
+        if user_role not in {"manager", "ops"}:
+            return jsonify({"status": "error", "reason": "forbidden"}), 403
+
+        data = request.get_json(silent=True) or {}
+        action_label = data.get("action_label", "").strip()
+        if not action_label:
+            return jsonify(
+                {"status": "error", "reason": "action_label is required"}
+            ), 400
+
+        payload = {
+            "anomaly_type": data.get("anomaly_type", "").strip(),
+            "anomaly_name": data.get("anomaly_name", "").strip(),
+            "atm_id": data.get("atm_id", "").strip(),
+            "action_label": action_label,
+            "notes": data.get("notes", "").strip(),
+            "user_role": user_role,
+            "username": session.get("user_name", ""),
+        }
+
+        with _connect() as conn:
+            _ensure_action_log_table(conn)
+            conn.execute(
+                """
+                INSERT INTO action_log (
+                    anomaly_type, anomaly_name, atm_id, action_label, notes, user_role, username
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload["anomaly_type"],
+                    payload["anomaly_name"],
+                    payload["atm_id"],
+                    payload["action_label"],
+                    payload["notes"],
+                    payload["user_role"],
+                    payload["username"],
+                ),
+            )
+            conn.commit()
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT anomaly_type, anomaly_name, atm_id, action_label, notes, user_role, username, created_at
+                FROM action_log
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+
+        return jsonify({"status": "ok", "action": dict(row)})
 
     # ── Live agent endpoints ───────────────────────────────────────────────────
 
@@ -1091,14 +1343,16 @@ def create_app(db_path: Path | None = None) -> Flask:
     def api_live_agent_status():
         global _live_agent
         if _live_agent is None:
-            return jsonify({
-                "status": "ok",
-                "running": False,
-                "events_generated": 0,
-                "last_event_ts": None,
-                "current_injection": None,
-                "interval_seconds": 10,
-            })
+            return jsonify(
+                {
+                    "status": "ok",
+                    "running": False,
+                    "events_generated": 0,
+                    "last_event_ts": None,
+                    "current_injection": None,
+                    "interval_seconds": 10,
+                }
+            )
         return jsonify({"status": "ok", **_live_agent.status()})
 
     @app.post("/api/live-agent/start")
@@ -1112,16 +1366,21 @@ def create_app(db_path: Path | None = None) -> Flask:
                 from src.synthetic.live_agent import LiveAgent
             except ImportError:
                 import sys
+
                 sys.path.insert(0, str(PROJECT_ROOT))
                 from src.synthetic.live_agent import LiveAgent
-            _live_agent = LiveAgent(db_path=app.config["DB_PATH"], interval_seconds=interval)
+            _live_agent = LiveAgent(
+                db_path=app.config["DB_PATH"], interval_seconds=interval
+            )
 
         started = _live_agent.start()
-        return jsonify({
-            "status": "ok",
-            "started": started,
-            **_live_agent.status(),
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "started": started,
+                **_live_agent.status(),
+            }
+        )
 
     @app.post("/api/live-agent/stop")
     def api_live_agent_stop():
@@ -1141,9 +1400,16 @@ def create_app(db_path: Path | None = None) -> Flask:
             return jsonify({"status": "error", "reason": "agent not running"}), 400
 
         if not _live_agent.inject_anomaly(anomaly_type):
-            return jsonify({"status": "error", "reason": f"unsupported anomaly type: {anomaly_type}"}), 400
+            return jsonify(
+                {
+                    "status": "error",
+                    "reason": f"unsupported anomaly type: {anomaly_type}",
+                }
+            ), 400
 
-        return jsonify({"status": "ok", "injected": anomaly_type, **_live_agent.status()})
+        return jsonify(
+            {"status": "ok", "injected": anomaly_type, **_live_agent.status()}
+        )
 
     return app
 
