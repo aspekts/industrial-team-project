@@ -17,7 +17,6 @@ from __future__ import annotations
 import random
 import sqlite3
 import threading
-import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -138,6 +137,7 @@ class LiveAgent:
         try:
             from src.analysis.detect import Detection
             from src.analysis.correlate import Correlator
+
             Detection(db_path=self.db_path).store_detections()
             Correlator(db_path=self.db_path).store_incidents()
         except Exception as exc:
@@ -145,7 +145,9 @@ class LiveAgent:
 
     # ── Record builders ───────────────────────────────────────────────────────
 
-    def _write_atma(self, conn, ts: str, atm: dict, corr_id: str, injection: str | None) -> int:
+    def _write_atma(
+        self, conn, ts: str, atm: dict, corr_id: str, injection: str | None
+    ) -> int:
         if injection == "A1":
             event_type = random.choice(["NETWORK_DISCONNECT", "TIMEOUT"])
             error_code = "ERR-0040"
@@ -169,17 +171,27 @@ class LiveAgent:
             ) VALUES (?, 'INFO', ?, ?, ?, ?, ?, ?, ?, 'NETWORK', ?, ?, ?, NULL, ?, NULL, ?, ?)
             """,
             (
-                ts, atm["id"], atm["location"],
-                str(uuid4()), corr_id, str(uuid4()),
-                event_type, message,
-                random.randint(1, 100), response_time_ms, error_code,
-                atm_status, APP_VERSION,
+                ts,
+                atm["id"],
+                atm["location"],
+                str(uuid4()),
+                corr_id,
+                str(uuid4()),
+                event_type,
+                message,
+                random.randint(1, 100),
+                response_time_ms,
+                error_code,
+                atm_status,
+                APP_VERSION,
                 injection,
             ),
         )
         return 1
 
-    def _write_kafk(self, conn, ts: str, atm: dict, corr_id: str, injection: str | None) -> int:
+    def _write_kafk(
+        self, conn, ts: str, atm: dict, corr_id: str, injection: str | None
+    ) -> int:
         if injection == "A1":
             atm_status = "Offline"
             failure_reason = "HOST_UNAVAILABLE"
@@ -231,17 +243,27 @@ class LiveAgent:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 60, ?, ?, ?)
             """,
             (
-                ts, str(uuid4()), corr_id, atm["id"],
-                atm_status, tps, response_time_ms,
-                random.randint(5, 50), success_rate,
-                failure_reason, failure_count,
-                random.randint(0, 3), max_offset + 1,
+                ts,
+                str(uuid4()),
+                corr_id,
+                atm["id"],
+                atm_status,
+                tps,
+                response_time_ms,
+                random.randint(5, 50),
+                success_rate,
+                failure_reason,
+                failure_count,
+                random.randint(0, 3),
+                max_offset + 1,
                 injection,
             ),
         )
         return 1
 
-    def _write_atmh(self, conn, ts: str, atm: dict, corr_id: str, injection: str | None) -> int:
+    def _write_atmh(
+        self, conn, ts: str, atm: dict, corr_id: str, injection: str | None
+    ) -> int:
         if injection == "A2":
             component = "CASH_DISPENSER"
             event_type = random.choice(["CASSETTE_LOW", "CASSETTE_EMPTY"])
@@ -249,7 +271,9 @@ class LiveAgent:
             message = f"Cash cassette {event_type.replace('_', ' ').lower()}"
             metric_value = 0
         else:
-            component = random.choice(["CARD_READER", "RECEIPT_PRINTER", "KEYPAD", "DISPLAY"])
+            component = random.choice(
+                ["CARD_READER", "RECEIPT_PRINTER", "KEYPAD", "DISPLAY"]
+            )
             event_type = "STATUS_OK"
             severity = "INFO"
             message = "Hardware sensor nominal"
@@ -263,11 +287,23 @@ class LiveAgent:
                 metric_unit, threshold_value, firmware_version, _anomaly
             ) VALUES (?, ?, ?, ?, ?, ?, ?, 'cassette_level', ?, 'percent', 20, NULL, ?)
             """,
-            (ts, atm["id"], corr_id, component, event_type, severity, message, metric_value, injection),
+            (
+                ts,
+                atm["id"],
+                corr_id,
+                component,
+                event_type,
+                severity,
+                message,
+                metric_value,
+                injection,
+            ),
         )
         return 1
 
-    def _write_term(self, conn, ts: str, atm: dict, corr_id: str, injection: str | None) -> int:
+    def _write_term(
+        self, conn, ts: str, atm: dict, corr_id: str, injection: str | None
+    ) -> int:
         if injection == "A1":
             event_type = "NETWORK_TIMEOUT"
             log_level = "ERROR"
@@ -299,10 +335,17 @@ class LiveAgent:
                       NULL, 200, ?, NULL, NULL, 'production', ?)
             """,
             (
-                ts, log_level, SVC_VERSION,
-                str(uuid4())[:12], corr_id, str(uuid4()),
-                atm_id, event_type, message,
-                exception_class, injection,
+                ts,
+                log_level,
+                SVC_VERSION,
+                str(uuid4())[:12],
+                corr_id,
+                str(uuid4()),
+                atm_id,
+                event_type,
+                message,
+                exception_class,
+                injection,
             ),
         )
         return 1
@@ -335,8 +378,13 @@ class LiveAgent:
                       NULL, NULL, ?, ?, ?, 0, ?)
             """,
             (
-                ts, atm["id"], atm["host"],
-                cpu, mem_used, mem_total, mem_pct,
+                ts,
+                atm["id"],
+                atm["host"],
+                cpu,
+                mem_used,
+                mem_total,
+                mem_pct,
                 round(random.uniform(10.0, 50.0), 1),
                 net_errors,
                 random.randint(50, 200),
@@ -346,9 +394,15 @@ class LiveAgent:
         )
         return 1
 
-    def _write_gcp(self, conn, ts: str, atm: dict, corr_id: str, injection: str | None) -> int:
+    def _write_gcp(
+        self, conn, ts: str, atm: dict, corr_id: str, injection: str | None
+    ) -> int:
         restart_count = random.randint(1, 5) if injection == "A4" else 0
-        cpu_pct = round(random.uniform(70.0, 90.0), 1) if injection == "A4" else round(random.uniform(20.0, 50.0), 1)
+        cpu_pct = (
+            round(random.uniform(70.0, 90.0), 1)
+            if injection == "A4"
+            else round(random.uniform(20.0, 50.0), 1)
+        )
 
         conn.execute(
             """
@@ -365,6 +419,14 @@ class LiveAgent:
                 'terminal-handler', 'production', ?, ?
             )
             """,
-            (ts, str(uuid4())[:20], cpu_pct, cpu_pct, restart_count, SVC_VERSION, injection),
+            (
+                ts,
+                str(uuid4())[:20],
+                cpu_pct,
+                cpu_pct,
+                restart_count,
+                SVC_VERSION,
+                injection,
+            ),
         )
         return 1
