@@ -2056,6 +2056,179 @@ function populateAdminAnomalyBreakdown(alerts, recommendations) {
     .join("");
 }
 
+// ─── Anomaly taxonomy ────────────────────────────────────────────────────────
+
+async function fetchTaxonomy() {
+  try {
+    const data = await fetch("/api/taxonomy").then((r) => r.json());
+    if (data.status === "ok") populateTaxonomy(data.entries || []);
+  } catch (err) {
+    console.warn("[dashboard] taxonomy fetch failed:", err);
+  }
+}
+
+function populateTaxonomy(entries) {
+  const tbody = document.getElementById("taxonomy-tbody");
+  const pill = document.getElementById("taxonomy-pill");
+
+  const staticCount = entries.filter((e) => e.discovery_method === "static").length;
+  const dynamicCount = entries.filter((e) => e.discovery_method === "dynamic").length;
+
+  if (pill) {
+    pill.textContent = entries.length === 0 ? "No data" : `${staticCount} static${dynamicCount > 0 ? ` · ${dynamicCount} dynamic` : ""}`;
+    pill.className = `status-pill ${entries.length > 0 ? "status-ok" : ""}`;
+  }
+
+  if (!tbody) return;
+  if (!entries.length) {
+    tbody.innerHTML = `<tr><td colspan="6">No taxonomy entries found — run the pipeline to seed static entries.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = entries
+    .map((e) => {
+      const sevClass = e.severity === "CRITICAL" ? "status-critical" : e.severity === "WARNING" ? "status-warning" : "status-ok";
+      const methodClass = e.discovery_method === "dynamic" ? "rec-conf-mid" : "";
+      const registeredAt = e.registered_at ? e.registered_at.slice(0, 16) : "—";
+      return `
+      <tr>
+        <th scope="row"><strong>${e.anomaly_type}</strong></th>
+        <td>${e.anomaly_name}</td>
+        <td><span class="status-pill ${sevClass}">${e.severity}</span></td>
+        <td><code>${e.source}</code></td>
+        <td><span class="${methodClass}" style="font-size:0.8rem;">${e.discovery_method}</span></td>
+        <td class="metric-subnote">${e.description || "—"}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+// ─── Live streaming agent ─────────────────────────────────────────────────────
+
+let _liveAgentPollInterval = null;
+
+async function fetchLiveAgentStatus() {
+  try {
+    const data = await fetch("/api/live-agent/status").then((r) => r.json());
+    if (data.status === "ok") populateLiveAgentPanel(data);
+    return data;
+  } catch (err) {
+    console.warn("[dashboard] live agent status fetch failed:", err);
+    return null;
+  }
+}
+
+function populateLiveAgentPanel(data) {
+  const pill = document.getElementById("live-agent-pill");
+  const statusText = document.getElementById("live-agent-status-text");
+  const eventsEl = document.getElementById("live-agent-events");
+  const lastEventEl = document.getElementById("live-agent-last-event");
+  const intervalEl = document.getElementById("live-agent-interval-display");
+  const startBtn = document.getElementById("live-agent-start-btn");
+  const stopBtn = document.getElementById("live-agent-stop-btn");
+  const injectStatus = document.getElementById("live-inject-status");
+
+  if (pill) {
+    pill.textContent = data.running ? (data.current_injection ? `Live — injecting ${data.current_injection}` : "Live") : "Idle";
+    pill.className = `status-pill ${data.running ? (data.current_injection ? "status-warning" : "status-ok") : ""}`;
+  }
+  if (statusText) statusText.textContent = data.running ? "Running" : "Idle";
+  if (eventsEl) eventsEl.textContent = (data.events_generated || 0).toLocaleString();
+  if (lastEventEl) lastEventEl.textContent = data.last_event_ts ? data.last_event_ts.slice(11, 19) + " UTC" : "—";
+  if (intervalEl) intervalEl.textContent = data.running ? `${data.interval_seconds}s` : "—";
+  if (startBtn) startBtn.disabled = data.running;
+  if (stopBtn) stopBtn.disabled = !data.running;
+
+  if (injectStatus && data.current_injection) {
+    injectStatus.textContent = `Injecting ${data.current_injection} — active for this batch.`;
+  }
+
+  if (data.running) {
+    _startLiveAgentPoll();
+  } else {
+    _stopLiveAgentPoll();
+  }
+}
+
+function _startLiveAgentPoll() {
+  if (_liveAgentPollInterval) return;
+  _liveAgentPollInterval = setInterval(async () => {
+    const agentData = await fetchLiveAgentStatus();
+    if (agentData && agentData.running) {
+      // Refresh dashboard data panels to reflect new records
+      fetchDashboardData();
+    }
+  }, 5000);
+}
+
+function _stopLiveAgentPoll() {
+  if (!_liveAgentPollInterval) return;
+  clearInterval(_liveAgentPollInterval);
+  _liveAgentPollInterval = null;
+}
+
+async function _controlLiveAgent(action, body = {}) {
+  try {
+    const resp = await fetch(`/api/live-agent/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return await resp.json();
+  } catch (err) {
+    console.warn(`[dashboard] live agent ${action} failed:`, err);
+    return null;
+  }
+}
+
+// Wire live agent buttons after DOM is ready
+(function wireLiveAgent() {
+  const startBtn = document.getElementById("live-agent-start-btn");
+  const stopBtn = document.getElementById("live-agent-stop-btn");
+  const injectChips = document.querySelectorAll("[data-inject]");
+  const injectStatus = document.getElementById("live-inject-status");
+  const intervalInput = document.getElementById("live-agent-interval-input");
+
+  if (startBtn) {
+    startBtn.addEventListener("click", async () => {
+      startBtn.disabled = true;
+      const interval = intervalInput ? parseInt(intervalInput.value, 10) || 10 : 10;
+      const data = await _controlLiveAgent("start", { interval });
+      if (data) populateLiveAgentPanel(data);
+    });
+  }
+
+  if (stopBtn) {
+    stopBtn.addEventListener("click", async () => {
+      stopBtn.disabled = true;
+      const data = await _controlLiveAgent("stop");
+      if (data) populateLiveAgentPanel(data);
+    });
+  }
+
+  injectChips.forEach((chip) => {
+    chip.addEventListener("click", async () => {
+      const anomalyType = chip.dataset.inject;
+      if (!anomalyType) return;
+      const data = await _controlLiveAgent("inject", { anomaly_type: anomalyType });
+      if (!data) return;
+      if (data.status === "ok") {
+        injectChips.forEach((c) => c.classList.remove("is-active"));
+        chip.classList.add("is-active");
+        if (injectStatus) injectStatus.textContent = `${anomalyType} injection scheduled — records will appear in the next batch.`;
+      } else if (data.reason && injectStatus) {
+        injectStatus.textContent = data.reason;
+      }
+    });
+  });
+})();
+
+// Load taxonomy and live agent status when data-flow screen is accessible
+if (validScreenIds.has("data-flow")) {
+  fetchTaxonomy();
+  fetchLiveAgentStatus();
+}
+
 function populateDataFlow(snapshot, alerts, mlSummary, incidents, recommendations) {
   const setStage = (n, { metric, details, pillText, pillClass }) => {
     const metricEl = document.getElementById(`stage-${n}-metric`);

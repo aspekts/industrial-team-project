@@ -826,6 +826,75 @@
             </tbody>
           </table>
         </section>
+
+        <section class="panel" id="taxonomy-panel" aria-labelledby="taxonomy-title" style="margin-top:1.5rem;">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Anomaly catalogue</p>
+              <h3 id="taxonomy-title">Anomaly taxonomy</h3>
+            </div>
+            <span id="taxonomy-pill" class="status-pill">Loading...</span>
+          </div>
+          <p class="metric-subnote" style="margin-bottom:0.75rem;">Registered anomaly types — static entries (A1–A7) are seeded at pipeline startup; dynamic entries are registered at runtime by ML-based discovery.</p>
+          <table id="taxonomy-table">
+            <caption class="sr-only">Anomaly taxonomy entries</caption>
+            <thead>
+              <tr>
+                <th scope="col">Type</th>
+                <th scope="col">Name</th>
+                <th scope="col">Severity</th>
+                <th scope="col">Sources</th>
+                <th scope="col">Method</th>
+                <th scope="col">Description</th>
+              </tr>
+            </thead>
+            <tbody id="taxonomy-tbody">
+              <tr><td colspan="6">Loading taxonomy...</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="panel" id="live-agent-panel" aria-labelledby="live-agent-title" style="margin-top:1.5rem;">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Live feed</p>
+              <h3 id="live-agent-title">Streaming log agent</h3>
+            </div>
+            <span id="live-agent-pill" class="status-pill">Idle</span>
+          </div>
+          <p class="metric-subnote" style="margin-bottom:0.75rem;">Simulate a live ATM edge device generating log entries in real time. Records are written directly to the database and detection re-runs automatically after each batch.</p>
+
+          <dl class="scale-list" style="margin-bottom:1rem;">
+            <div class="scale-item"><dt>Status</dt><dd id="live-agent-status-text">Idle</dd></div>
+            <div class="scale-item"><dt>Events generated</dt><dd id="live-agent-events">0</dd></div>
+            <div class="scale-item"><dt>Last event</dt><dd id="live-agent-last-event">—</dd></div>
+            <div class="scale-item"><dt>Interval</dt><dd id="live-agent-interval-display">—</dd></div>
+          </dl>
+
+          <div class="button-row" style="margin-bottom:1rem;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <label class="metric-subnote" for="live-agent-interval-input" style="white-space:nowrap;">Interval (s)</label>
+              <input id="live-agent-interval-input" type="number" min="1" max="300" value="10"
+                style="width:5rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.875rem;" />
+            </div>
+            <button class="button" type="button" id="live-agent-start-btn">Start agent</button>
+            <button class="button-secondary" type="button" id="live-agent-stop-btn" disabled>Stop agent</button>
+          </div>
+
+          <div id="live-inject-panel">
+            <p class="eyebrow" style="margin-bottom:0.5rem;">Anomaly injection</p>
+            <p class="metric-subnote" style="margin-bottom:0.75rem;">Inject anomaly-indicative records for the next three ticks to test live detection and recommendation updates.</p>
+            <div class="filter-row" style="flex-wrap:wrap;gap:0.5rem;">
+              <button class="filter-chip" type="button" data-inject="A1">A1 — Network timeout</button>
+              <button class="filter-chip" type="button" data-inject="A2">A2 — Cash depletion</button>
+              <button class="filter-chip" type="button" data-inject="A4">A4 — Container restart</button>
+              <button class="filter-chip" type="button" data-inject="A5">A5 — Perf degradation</button>
+              <button class="filter-chip" type="button" data-inject="A6">A6 — OS pressure</button>
+              <button class="filter-chip" type="button" data-inject="A7">A7 — Malformed Kafka</button>
+            </div>
+            <p id="live-inject-status" class="metric-subnote" style="margin-top:0.5rem;" aria-live="polite"></p>
+          </div>
+        </section>
       </section>
 
       </main>

@@ -72,6 +72,14 @@ class Detection:
                     detected_at TEXT DEFAULT (datetime('now'))
                 )
             """)
+            # Migrate: add discovery_method to tables created before the column existed
+            existing_cols = [
+                row[1] for row in conn.execute("PRAGMA table_info(analysis_detections)").fetchall()
+            ]
+            if "discovery_method" not in existing_cols:
+                conn.execute(
+                    "ALTER TABLE analysis_detections ADD COLUMN discovery_method TEXT NOT NULL DEFAULT 'static'"
+                )
             conn.execute("DELETE FROM analysis_detections")
             conn.executemany("""
                 INSERT INTO analysis_detections

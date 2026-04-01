@@ -65,6 +65,8 @@ All data used in this project is **synthetic** — no real NCR Atleos production
 │   └── dashboard/      # Sophina — visualisation & UI
 ├── tests/              # Mirrors src/ structure
 ├── docs/               # Schema spec, architecture diagrams, ADRs
+│   ├── schema.md           — Source table schemas and field definitions
+│   └── intake_method.md    — ADR: realtime log intake approach (issue #28)
 ├── notebooks/          # Exploratory / prototyping notebooks (not production code)
 └── .github/workflows/  # CI — lint + test on every push / PR
 ```
@@ -107,6 +109,14 @@ pytest
 ```bash
 ruff check .
 ```
+
+---
+
+## Architecture decisions
+
+| ADR | Description |
+|---|---|
+| [Realtime log intake method](docs/intake_method.md) | Direct DB micro-batch approach — live agent writes to SQLite; dashboard polls every 5 s |
 
 ---
 

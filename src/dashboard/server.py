@@ -63,6 +63,9 @@ def render_dashboard_view(role: str):
     return render_template_string(dashboard_html)
 
 
+_live_agent = None  # module-level singleton; started/stopped via API
+
+
 def create_app(db_path: Path | None = None) -> Flask:
     app = Flask(
         __name__,
@@ -1081,6 +1084,66 @@ def create_app(db_path: Path | None = None) -> Flask:
             "history": engine.get_feedback_history(20),
             "stats": engine.get_feedback_stats(),
         })
+
+    # ── Live agent endpoints ───────────────────────────────────────────────────
+
+    @app.get("/api/live-agent/status")
+    def api_live_agent_status():
+        global _live_agent
+        if _live_agent is None:
+            return jsonify({
+                "status": "ok",
+                "running": False,
+                "events_generated": 0,
+                "last_event_ts": None,
+                "current_injection": None,
+                "interval_seconds": 10,
+            })
+        return jsonify({"status": "ok", **_live_agent.status()})
+
+    @app.post("/api/live-agent/start")
+    def api_live_agent_start():
+        global _live_agent
+        data = request.get_json(silent=True) or {}
+        interval = int(data.get("interval", 10))
+
+        if _live_agent is None or not _live_agent.running:
+            try:
+                from src.synthetic.live_agent import LiveAgent
+            except ImportError:
+                import sys
+                sys.path.insert(0, str(PROJECT_ROOT))
+                from src.synthetic.live_agent import LiveAgent
+            _live_agent = LiveAgent(db_path=app.config["DB_PATH"], interval_seconds=interval)
+
+        started = _live_agent.start()
+        return jsonify({
+            "status": "ok",
+            "started": started,
+            **_live_agent.status(),
+        })
+
+    @app.post("/api/live-agent/stop")
+    def api_live_agent_stop():
+        global _live_agent
+        if _live_agent is None:
+            return jsonify({"status": "ok", "running": False})
+        _live_agent.stop()
+        return jsonify({"status": "ok", **_live_agent.status()})
+
+    @app.post("/api/live-agent/inject")
+    def api_live_agent_inject():
+        global _live_agent
+        data = request.get_json(silent=True) or {}
+        anomaly_type = data.get("anomaly_type", "").upper()
+
+        if _live_agent is None or not _live_agent.running:
+            return jsonify({"status": "error", "reason": "agent not running"}), 400
+
+        if not _live_agent.inject_anomaly(anomaly_type):
+            return jsonify({"status": "error", "reason": f"unsupported anomaly type: {anomaly_type}"}), 400
+
+        return jsonify({"status": "ok", "injected": anomaly_type, **_live_agent.status()})
 
     return app
 
