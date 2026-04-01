@@ -982,6 +982,23 @@ def create_app(db_path: Path | None = None) -> Flask:
             "sources": [{"source": r[0], "scored": r[1], "anomalies": int(r[2] or 0)} for r in source_rows],
         })
 
+    @app.get("/api/taxonomy")
+    def api_taxonomy():
+        db_file = _db()
+        if not db_file.exists():
+            return jsonify({"status": "unavailable", "entries": []})
+        with _connect() as conn:
+            if not _table_exists(conn, "anomaly_taxonomy"):
+                return jsonify({"status": "ok", "entries": []})
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM anomaly_taxonomy ORDER BY discovery_method, anomaly_type"
+            ).fetchall()
+        return jsonify({
+            "status": "ok",
+            "entries": [dict(r) for r in rows],
+        })
+
     @app.get("/api/recommendations")
     def api_recommendations():
         db_file = _db()

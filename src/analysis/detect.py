@@ -68,6 +68,7 @@ class Detection:
                     detection_timestamp TEXT,
                     description TEXT,
                     event_count INTEGER DEFAULT 1,
+                    discovery_method TEXT NOT NULL DEFAULT 'static',
                     detected_at TEXT DEFAULT (datetime('now'))
                 )
             """)
@@ -75,8 +76,8 @@ class Detection:
             conn.executemany("""
                 INSERT INTO analysis_detections
                     (anomaly_type, anomaly_name, severity, source, atm_id,
-                     detection_timestamp, description, event_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     detection_timestamp, description, event_count, discovery_method)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'static')
             """, rows)
             conn.commit()
 
