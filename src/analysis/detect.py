@@ -7,56 +7,162 @@ from src.analysis.analyse_data import AnalyseData
 
 
 class Detection:
+    """
+    Detection class responsible for:
+    1. Running anomaly detection checks via AnalyseData
+    2. Aggregating and summarising results
+    3. Storing detections into a SQLite database
+    4. Providing simple processors for printing/logging detections
+    """
+
     def __init__(self, db_path: str = "data/clean/atm_logs.db"):
+        # Path to SQLite database
         self.db_path = db_path
+
+        # Instance of analysis engine that performs raw anomaly detection
         self.analyse_data = AnalyseData(db_path=db_path)
 
     def store_detections(self) -> None:
+        """
+        Runs all detection checks, summarises results, and stores them
+        into the `analysis_detections` table.
+        """
+
         def _summarise(detections, anomaly_type, anomaly_name, severity, desc_fn):
+            """
+            Groups detections by (source, atm_id) and aggregates:
+            - count of events
+            - first timestamp
+            - latest description
+
+            Returns list of rows ready for DB insertion.
+            """
             groups = defaultdict(lambda: {"count": 0, "timestamp": None, "desc": ""})
+
             for d in detections:
+                # Group by source and ATM ID
                 key = (d.get("source", "UNKNOWN"), d.get("atm_id") or "N/A")
+
                 groups[key]["count"] += 1
+
+                # Store first timestamp seen
                 if groups[key]["timestamp"] is None:
                     groups[key]["timestamp"] = d.get("timestamp")
+
+                # Generate description using provided function
                 groups[key]["desc"] = desc_fn(d)
+
+            # Convert grouped data into DB row format
             return [
-                (anomaly_type, anomaly_name, severity, src, atm_id,
-                 info["timestamp"], info["desc"], info["count"])
+                (
+                    anomaly_type,
+                    anomaly_name,
+                    severity,
+                    src,
+                    atm_id,
+                    info["timestamp"],
+                    info["desc"],
+                    info["count"],
+                )
                 for (src, atm_id), info in groups.items()
             ]
 
         rows = []
+
+        # ---------------------------
+        # A1: Network timeout cascade
+        # ---------------------------
         rows += _summarise(
-            self.analyse_data.check_network_errors(), "A1", "Network timeout cascade", "CRITICAL",
-            lambda d: f"Host unavailable: {d.get('transaction_failure_reason')}" if d.get("source") == "KAFK"
-            else f"Disconnect/timeout: {d.get('error_code')} — {(d.get('error_detail') or '')[:80]}" if d.get("source") == "ATMA"
-            else f"Network timeout: {(d.get('message') or '')[:80]}",
+            self.analyse_data.check_network_errors(),
+            "A1",
+            "Network timeout cascade",
+            "CRITICAL",
+            lambda d: (
+                f"Host unavailable: {d.get('transaction_failure_reason')}"
+                if d.get("source") == "KAFK"
+                else f"Disconnect/timeout: {d.get('error_code')} — {(d.get('error_detail') or '')[:80]}"
+                if d.get("source") == "ATMA"
+                else f"Network timeout: {(d.get('message') or '')[:80]}"
+            ),
         )
+
+        # ---------------------------
+        # A2: Cash cassette depletion
+        # ---------------------------
         rows += _summarise(
-            self.analyse_data.check_cash_cassette_depletion(), "A2", "Cash cassette depletion", "CRITICAL",
-            lambda d: f"Cassette {d.get('event_type')} ({d.get('severity')})" if d.get("source") == "ATMH"
-            else f"Transaction failure: {d.get('transaction_failure_reason')}",
+            self.analyse_data.check_cash_cassette_depletion(),
+            "A2",
+            "Cash cassette depletion",
+            "CRITICAL",
+            lambda d: (
+                f"Cassette {d.get('event_type')} ({d.get('severity')})"
+                if d.get("source") == "ATMH"
+                else f"Transaction failure: {d.get('transaction_failure_reason')}"
+            ),
         )
+
+        # ---------------------------
+        # A4: Container restart loop
+        # ---------------------------
         rows += _summarise(
-            self.analyse_data.check_container_restarts(), "A4", "Container restart loop", "WARNING",
-            lambda d: f"Container restarted {d.get('restart_count')}x" if d.get("source") == "GCP"
-            else f"Service {d.get('event_type') or 'OOM'}: {(d.get('exception_class') or d.get('message') or '')[:80]}",
+            self.analyse_data.check_container_restarts(),
+            "A4",
+            "Container restart loop",
+            "WARNING",
+            lambda d: (
+                f"Container restarted {d.get('restart_count')}x"
+                if d.get("source") == "GCP"
+                else f"Service {d.get('event_type') or 'OOM'}: {(d.get('exception_class') or d.get('message') or '')[:80]}"
+            ),
         )
+
+        # ---------------------------
+        # A5: Performance degradation
+        # ---------------------------
         rows += _summarise(
-            self.analyse_data.check_performance_degradation(), "A5", "Performance degradation", "WARNING",
-            lambda d: f"Resp {d.get('response_time_ms')}ms, success {d.get('transaction_success_rate')}%, failures {d.get('failure_count')}",
+            self.analyse_data.check_performance_degradation(),
+            "A5",
+            "Performance degradation",
+            "WARNING",
+            lambda d: (
+                f"Resp {d.get('response_time_ms')}ms, "
+                f"success {d.get('transaction_success_rate')}%, "
+                f"failures {d.get('failure_count')}"
+            ),
         )
+
+        # ---------------------------
+        # A6: OS memory pressure
+        # ---------------------------
         rows += _summarise(
-            self.analyse_data.check_windows_os_metrics(), "A6", "OS memory pressure", "WARNING",
-            lambda d: f"Mem {d.get('memory_usage_percent')}%, CPU {d.get('cpu_usage_percent')}%, net errors {d.get('network_errors')}",
+            self.analyse_data.check_windows_os_metrics(),
+            "A6",
+            "OS memory pressure",
+            "WARNING",
+            lambda d: (
+                f"Mem {d.get('memory_usage_percent')}%, "
+                f"CPU {d.get('cpu_usage_percent')}%, "
+                f"net errors {d.get('network_errors')}"
+            ),
         )
+
+        # ---------------------------
+        # A7: Kafka anomalies
+        # ---------------------------
         rows += _summarise(
-            self.analyse_data.check_kafka_events(), "A7", "Out-of-order / malformed Kafka event", "WARNING",
+            self.analyse_data.check_kafka_events(),
+            "A7",
+            "Out-of-order / malformed Kafka event",
+            "WARNING",
             lambda d: f"Offset {d.get('kafka_offset')} ordering or integrity issue",
         )
 
+        # ---------------------------
+        # Database operations
+        # ---------------------------
         with sqlite3.connect(self.db_path) as conn:
+
+            # Create table if it doesn't exist
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS analysis_detections (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +178,8 @@ class Detection:
                     detected_at TEXT DEFAULT (datetime('now'))
                 )
             """)
-            # Migrate: add discovery_method to tables created before the column existed
+
+            # Handle schema migration (older tables without discovery_method)
             existing_cols = [
                 row[1] for row in conn.execute("PRAGMA table_info(analysis_detections)").fetchall()
             ]
@@ -80,199 +187,100 @@ class Detection:
                 conn.execute(
                     "ALTER TABLE analysis_detections ADD COLUMN discovery_method TEXT NOT NULL DEFAULT 'static'"
                 )
+
+            # Clear previous detections (full refresh)
             conn.execute("DELETE FROM analysis_detections")
+
+            # Insert new detection rows
             conn.executemany("""
                 INSERT INTO analysis_detections
                     (anomaly_type, anomaly_name, severity, source, atm_id,
                      detection_timestamp, description, event_count, discovery_method)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'static')
             """, rows)
+
             conn.commit()
 
         print(f"[INFO] Analysis complete: {len(rows)} detection groups written to analysis_detections.")
 
-    def detect(self):
-        """
-            This function will execute the analysis functions and then process the results to a readable format.
-            Currently the processing is printing into the console but this will be uploaded to the db and then cached for the dashboard to display
-        """
-
-        network_detections = self.analyse_data.check_network_errors()
-        
-        if network_detections:
-            print("------ Network Error(s) Detected ------")
-            self.process_network_detections(network_detections)
-            print("--------------------------------------")
-
-        cassette_detections = self.analyse_data.check_cash_cassette_depletion()
-
-        if cassette_detections:
-            print("------ Cash Cassette Depletion Detected ------")
-            self.process_cassette_detections(cassette_detections)
-            print("---------------------------------------------")
-
-
-        """
-        For memory leaks, there is over 5000 detections in the data, will need to find an optimal solution to display all the data.
-        """
-        # memory_leak_detections = self.analyse_data.check_memory_leaks()
-
-        # print(len(memory_leak_detections))
-
-        # if memory_leak_detections:
-        #     print("------ Memory Leak Anomalies Detected ------")
-        #     self.process_memory_leak_detections(memory_leak_detections)
-        #     print("-------------------------------------------")
-
-        container_restart_detections = self.analyse_data.check_container_restarts()
-
-        if container_restart_detections:
-            print("------ Container Restart Anomalies Detected ------")
-            self.process_container_restart_detections(container_restart_detections)
-            print("-----------------------------------------------")
-
-
-        performance_degradation_detections = self.analyse_data.check_performance_degradation()
-
-        if performance_degradation_detections:
-            print("------ Performance Degradation Anomalies Detected ------")
-            self.process_performance_degradation_detections(performance_degradation_detections)
-            print("-----------------------------------------------")
-
-        windows_os_metrics_detections = self.analyse_data.check_windows_os_metrics()
-
-        if windows_os_metrics_detections:
-            print("------ Windows OS Metrics Anomalies Detected ------")
-            self.process_windows_os_metrics_detections(windows_os_metrics_detections)
-            print("-----------------------------------------------")
-
-        kafka_events_detections = self.analyse_data.check_kafka_events()
-
-        if kafka_events_detections:
-            print("------ Kafka Event Anomalies Detected ------")
-            self.process_kafka_events_detections(kafka_events_detections)
-            print("-------------------------------------------")
+    # ------------------------------------------------------------------
+    # Below: Processing functions (mainly for logging / debugging output)
+    # ------------------------------------------------------------------
 
     def process_network_detections(self, detections):
+        """Prints network-related anomalies (A1)."""
         for detection in detections:
             source = detection.get('source')
             atm_id = detection.get('atm_id')
-            
+
             if source == 'KAFK':
-                timestamp = detection.get('timestamp')
-                transaction_failure_reason = detection.get('transaction_failure_reason')
-                
-                print(f"A1 Network anomaly detected from {source} at {timestamp}. Details: {atm_id} - {transaction_failure_reason}")
+                print(f"A1 Network anomaly detected from {source} at {detection.get('timestamp')}. "
+                      f"Details: {atm_id} - {detection.get('transaction_failure_reason')}")
+
             elif source == 'ATMA':
-                timestamp = detection.get('timestamp')
-                error_detail = detection.get('error_detail')
-                error_code = detection.get('error_code')
-                
-                print(f"Network anomaly detected from {source} at {timestamp}. Details: {atm_id} - {error_code} - {error_detail}")
+                print(f"Network anomaly detected from {source} at {detection.get('timestamp')}. "
+                      f"Details: {atm_id} - {detection.get('error_code')} - {detection.get('error_detail')}")
+
             elif source == 'TERM':
-                timestamp = detection.get('timestamp')
-                message = detection.get('message')
-                
-                print(f"A1 Network anomaly detected from {source} at {timestamp}. Details: {atm_id} - {message}")
+                print(f"A1 Network anomaly detected from {source} at {detection.get('timestamp')}. "
+                      f"Details: {atm_id} - {detection.get('message')}")
 
         return True
 
     def process_cassette_detections(self, detections):
+        """Prints cash cassette depletion anomalies (A2)."""
         for detection in detections:
             source = detection.get('source')
             atm_id = detection.get('atm_id')
-            
+
             if source == 'KAFK':
-                timestamp = detection.get('timestamp')
-                transaction_failure_reason = detection.get('transaction_failure_reason')
-                
-                print(f"A2 Cash cassette depletion anomaly detected from {source} at {timestamp}. Details: {atm_id} - {transaction_failure_reason}")
+                print(f"A2 Cash cassette depletion anomaly detected from {source} at {detection.get('timestamp')}. "
+                      f"Details: {atm_id} - {detection.get('transaction_failure_reason')}")
+
             elif source == 'ATMH':
-                timestamp = detection.get('timestamp')
-                message = detection.get('message')
-                severity = detection.get('severity')
-                
-                print(f"A2 Cash cassette depletion anomaly detected from {source} at {timestamp}. Details: {atm_id} - {severity} - {message}")
+                print(f"A2 Cash cassette depletion anomaly detected from {source} at {detection.get('timestamp')}. "
+                      f"Details: {atm_id} - {detection.get('severity')} - {detection.get('message')}")
 
         return True
 
     def process_memory_leak_detections(self, detections):
-        # for detection in detections:
-        #     source = detection.get('source')
-        #   atm_id = detection.get('atm_id')
-            
-        #     if source == 'PROM':
-        #         timestamp = detection.get('timestamp')
-        #         metric_name = detection.get('metric_name')
-        #         metric_value = detection.get('metric_value')
-                
-        #         print(f"A3 Memory leak anomaly detected from {source} at {timestamp}. Details: {atm_id} - {metric_name} - {metric_value}")
-        #     elif source == 'GCP':
-        #         timestamp = detection.get('timestamp')
-        #         message = detection.get('message')
-        #         severity = detection.get('severity')
-                
-        #         print(f"A3 Memory leak anomaly detected from {source} at {timestamp}. Details: {atm_id} - {severity} - {message}")
-        #     elif source == 'TERM':
-        #         timestamp = detection.get('timestamp')
-        #         message = detection.get('message')
-                
-        #         print(f"A3 Memory leak anomaly detected from {source} at {timestamp}. Details: {atm_id} - {message}")
+        """
+        Placeholder for A3 (Memory leak detection).
+        Currently not implemented.
+        """
         pass
 
     def process_container_restart_detections(self, detections):
+        """Prints container restart anomalies (A4)."""
         for detection in detections:
-            source = detection.get('source')
-            
-            # if source == 'GCP':
-            #     timestamp = detection.get('timestamp')
-            #     message = detection.get('message')
-            #     severity = detection.get('severity')
-                
-            #     print(f"A4 Container restart anomaly detected from {source} at {timestamp}. Details: {severity} - {message}")
-            if source == 'TERM':
-                timestamp = detection.get('timestamp')
-                message = detection.get('message')
-                atm_id = detection.get('atm_id')
-                
-                print(f"A4 Container restart anomaly detected from {source} at {timestamp}. Details: {atm_id} - {message}")
+            if detection.get('source') == 'TERM':
+                print(f"A4 Container restart anomaly detected from TERM at {detection.get('timestamp')}. "
+                      f"Details: {detection.get('atm_id')} - {detection.get('message')}")
         return True
 
     def process_performance_degradation_detections(self, detections):
+        """Prints performance degradation anomalies (A5)."""
         for detection in detections:
-            source = detection.get('source')
-            
-            if source == 'KAFK':
-                timestamp = detection.get('timestamp')
-                transaction_failure_reason = detection.get('transaction_failure_reason')
-                atm_id = detection.get('atm_id')
-                
-                print(f"A5 Performance degradation anomaly detected from {source} at {timestamp}. Details: {atm_id} - {transaction_failure_reason}")
+            if detection.get('source') == 'KAFK':
+                print(f"A5 Performance degradation anomaly detected from KAFK at {detection.get('timestamp')}. "
+                      f"Details: {detection.get('atm_id')} - {detection.get('transaction_failure_reason')}")
         return True
 
     def process_windows_os_metrics_detections(self, detections):
+        """Prints OS-level anomalies (A6)."""
         for detection in detections:
-            source = detection.get('source')
-            
-            if source == 'WINOS':
-                timestamp = detection.get('timestamp')
-                atm_id = detection.get('atm_id')
-                cpu = detection.get('cpu_usage_percent')
-                memory = detection.get('memory_usage_percent')
-                network = detection.get('network_errors')
-                metric_value = f"CPU: {cpu}%, Memory: {memory}%, Network: {network}"
-                
-                print(f"A6 Windows OS metrics anomaly detected from {source} at {timestamp}. Details: {atm_id} - {metric_value}")
+            if detection.get('source') == 'WINOS':
+                print(f"A6 Windows OS metrics anomaly detected from WINOS at {detection.get('timestamp')}. "
+                      f"Details: {detection.get('atm_id')} - "
+                      f"CPU: {detection.get('cpu_usage_percent')}%, "
+                      f"Memory: {detection.get('memory_usage_percent')}%, "
+                      f"Network: {detection.get('network_errors')}")
         return True
 
     def process_kafka_events_detections(self, detections):
+        """Prints Kafka-related anomalies (A7)."""
         for detection in detections:
-            source = detection.get('source')
-            
-            if source == 'KAFK':
-                timestamp = detection.get('timestamp')
-                atm_id = detection.get('atm_id')
-                event_details = detection.get('event_details')
-
-                print(f"A7 Kafka event anomaly detected from {source} at {timestamp}. Details: {atm_id} - {event_details}")
+            if detection.get('source') == 'KAFK':
+                print(f"A7 Kafka event anomaly detected from KAFK at {detection.get('timestamp')}. "
+                      f"Details: {detection.get('atm_id')} - {detection.get('event_details')}")
         return True
