@@ -18,6 +18,8 @@ config = ConfigParser()
 config.read("config.ini")
 
 def run_pipeline():
+    """Execute the ingestion, cleaning, detection, scoring, and correlation pipeline."""
+
     # Stage 1: Ingest raw log files into a structured format
     run_ingestion()
 
@@ -45,6 +47,8 @@ def run_pipeline():
     # Stage 5: Correlate detections into cross-source incidents
     Correlator(db_path=CLEANED_DB_PATH).store_incidents()
 def run_simulation(interval_min=5):
+    """Run the data pipeline repeatedly on a fixed minute interval."""
+
     try:
         while True:
             try:

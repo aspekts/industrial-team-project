@@ -11,6 +11,8 @@ DEFAULT_AUTH_DB_PATH = PROJECT_ROOT / "data" / "clean" / "auth.db"
 
 
 def ensure_auth_db(db_path: Path | None = None) -> Path:
+    """Create the authentication database and users table when missing."""
+
     auth_db_path = Path(db_path or DEFAULT_AUTH_DB_PATH)
     auth_db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -36,14 +38,20 @@ def ensure_auth_db(db_path: Path | None = None) -> Path:
 
 
 def hash_password(password: str) -> str:
+    """Return a secure password hash for a plaintext password."""
+
     return generate_password_hash(password)
 
 
 def verify_password(password: str, stored_password_hash: str) -> bool:
+    """Validate a plaintext password against a stored hash."""
+
     return check_password_hash(stored_password_hash, password)
 
 
 def get_user_by_username(username: str, db_path: Path | None = None) -> dict | None:
+    """Look up a user record by username."""
+
     auth_db_path = Path(db_path or DEFAULT_AUTH_DB_PATH)
     with sqlite3.connect(auth_db_path) as conn:
         conn.row_factory = sqlite3.Row
@@ -68,6 +76,8 @@ def create_user(
     db_path: Path | None = None,
     email: str | None = None,
 ) -> bool:
+    """Insert a new user record into the authentication database."""
+
     auth_db_path = Path(db_path or DEFAULT_AUTH_DB_PATH)
     password_hash = hash_password(password)
 

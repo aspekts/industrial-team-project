@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">ATM operations dashboard wireframe</title>
+  <desc id="desc">Report-ready grayscale wireframe of the ATM operations dashboard showing the sidebar, dashboard header, priority banner, metric cards, trend panel, source checks, ATM list, alerts, actions, and data flow areas.</desc>
+
+  <defs>
+    <style>
+      .bg { fill: #f5f5f5; }
+      .shell { fill: #ffffff; stroke: #232323; stroke-width: 2; }
+      .panel { fill: #ffffff; stroke: #444444; stroke-width: 1.5; }
+      .soft { fill: #fafafa; stroke: #737373; stroke-width: 1.25; stroke-dasharray: 8 6; }
+      .dark { fill: #e6e6e6; stroke: #232323; stroke-width: 1.5; }
+      .mid { fill: #efefef; stroke: #555555; stroke-width: 1.25; }
+      .line { stroke: #565656; stroke-width: 1.5; fill: none; }
+      .thin { stroke: #8a8a8a; stroke-width: 1; fill: none; }
+      .txt-title { font: 700 28px Arial, Helvetica, sans-serif; fill: #111111; }
+      .txt-h1 { font: 700 22px Arial, Helvetica, sans-serif; fill: #111111; }
+      .txt-h2 { font: 700 17px Arial, Helvetica, sans-serif; fill: #111111; }
+      .txt-body { font: 400 14px Arial, Helvetica, sans-serif; fill: #2a2a2a; }
+      .txt-small { font: 400 12px Arial, Helvetica, sans-serif; fill: #4a4a4a; }
+      .txt-label { font: 700 11px Arial, Helvetica, sans-serif; fill: #5a5a5a; letter-spacing: 1px; }
+      .pill { fill: #e0e0e0; stroke: #4a4a4a; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="980"/>
+  <text class="txt-title" x="64" y="58">ATM Operations Dashboard Wireframe</text>
+  <text class="txt-body" x="64" y="86">Mock UI for report use based on the current role-based Flask dashboard structure.</text>
+
+  <rect class="shell" x="60" y="120" width="1480" height="790" rx="24"/>
+
+  <rect class="dark" x="84" y="144" width="300" height="742" rx="20"/>
+  <text class="txt-label" x="112" y="182">SIDEBAR</text>
+  <text class="txt-h1" x="112" y="216">Operations Hub</text>
+  <text class="txt-small" x="112" y="238">Source-backed ATM telemetry and anomaly monitoring</text>
+
+  <rect class="panel" x="112" y="262" width="244" height="42" rx="10"/>
+  <text class="txt-body" x="128" y="289">Search ATMs, anomalies, sources</text>
+
+  <rect class="panel" x="112" y="326" width="244" height="92" rx="14"/>
+  <text class="txt-h2" x="128" y="350">Source Key</text>
+  <text class="txt-small" x="128" y="374">ATMA  ATM app logs</text>
+  <text class="txt-small" x="128" y="392">ATMH  Hardware alerts</text>
+  <text class="txt-small" x="248" y="374">KAFK  Stream health</text>
+  <text class="txt-small" x="248" y="392">WINOS Host metrics</text>
+
+  <rect class="panel" x="112" y="438" width="244" height="108" rx="14"/>
+  <text class="txt-h2" x="128" y="462">Date Filter</text>
+  <rect class="mid" x="128" y="478" width="212" height="30" rx="8"/>
+  <rect class="mid" x="128" y="518" width="130" height="20" rx="8"/>
+  <rect class="mid" x="270" y="518" width="70" height="20" rx="8"/>
+
+  <rect class="panel" x="112" y="566" width="244" height="86" rx="14"/>
+  <text class="txt-h2" x="128" y="590">Display Size</text>
+  <rect class="mid" x="128" y="606" width="212" height="28" rx="10"/>
+
+  <rect class="panel" x="112" y="672" width="244" height="96" rx="14"/>
+  <text class="txt-h2" x="128" y="696">Data Footprint</text>
+  <text class="txt-small" x="128" y="720">Sources      7</text>
+  <text class="txt-small" x="128" y="738">ATMs         6</text>
+  <text class="txt-small" x="128" y="756">Avg TPS      2.8</text>
+
+  <rect class="panel" x="112" y="790" width="244" height="72" rx="14"/>
+  <text class="txt-h2" x="128" y="816">Navigation</text>
+  <text class="txt-small" x="128" y="838">Dashboard   ATM List   Alerts   Actions</text>
+  <text class="txt-small" x="128" y="854">Data Flow   Settings</text>
+
+  <text class="txt-label" x="418" y="182">MAIN CONTENT</text>
+  <rect class="panel" x="416" y="144" width="1096" height="82" rx="18"/>
+  <text class="txt-h1" x="446" y="178">Source-Backed Operations View</text>
+  <text class="txt-body" x="446" y="202">Dashboard header with role context, search state, and overall system status pill</text>
+  <rect class="pill" x="1320" y="166" width="160" height="32" rx="16"/>
+  <text class="txt-small" x="1364" y="187">STATUS</text>
+
+  <rect class="dark" x="416" y="246" width="1096" height="74" rx="18"/>
+  <text class="txt-label" x="444" y="272">PRIORITY BANNER</text>
+  <text class="txt-h1" x="444" y="300">Immediate action needed: top anomaly group and CTA</text>
+  <rect class="panel" x="1306" y="264" width="174" height="34" rx="10"/>
+  <text class="txt-small" x="1352" y="286">VIEW ALERTS</text>
+
+  <text class="txt-label" x="418" y="352">TOP METRICS</text>
+  <rect class="panel" x="416" y="364" width="256" height="124" rx="18"/>
+  <rect class="panel" x="694" y="364" width="256" height="124" rx="18"/>
+  <rect class="panel" x="972" y="364" width="256" height="124" rx="18"/>
+  <rect class="panel" x="1250" y="364" width="262" height="124" rx="18"/>
+  <text class="txt-h2" x="438" y="394">Observed ATMs</text>
+  <text class="txt-h2" x="716" y="394">ATM App Errors</text>
+  <text class="txt-h2" x="994" y="394">Hardware Alerts</text>
+  <text class="txt-h2" x="1272" y="394">Event Throughput</text>
+  <rect class="mid" x="438" y="410" width="72" height="42" rx="10"/>
+  <rect class="mid" x="716" y="410" width="72" height="42" rx="10"/>
+  <rect class="mid" x="994" y="410" width="72" height="42" rx="10"/>
+  <rect class="mid" x="1272" y="410" width="72" height="42" rx="10"/>
+  <text class="txt-small" x="438" y="472">Click-through metric card</text>
+  <text class="txt-small" x="716" y="472">Click-through metric card</text>
+  <text class="txt-small" x="994" y="472">Click-through metric card</text>
+  <text class="txt-small" x="1272" y="472">Click-through metric card</text>
+
+  <text class="txt-label" x="418" y="520">PRIMARY GRID</text>
+  <rect class="panel" x="416" y="532" width="528" height="188" rx="18"/>
+  <text class="txt-h2" x="440" y="560">Priority Item / Next Best Action</text>
+  <rect class="mid" x="440" y="580" width="480" height="22" rx="8"/>
+  <rect class="mid" x="440" y="612" width="430" height="18" rx="8"/>
+  <rect class="mid" x="440" y="640" width="448" height="18" rx="8"/>
+  <rect class="mid" x="440" y="668" width="390" height="18" rx="8"/>
+  <rect class="panel" x="440" y="690" width="150" height="22" rx="8"/>
+  <rect class="panel" x="602" y="690" width="174" height="22" rx="8"/>
+
+  <rect class="panel" x="964" y="532" width="548" height="188" rx="18"/>
+  <text class="txt-h2" x="988" y="560">Trend and Host Pressure</text>
+  <path class="line" d="M992 670 C1060 654, 1122 642, 1180 624 S1286 580, 1368 602 S1452 626, 1482 594"/>
+  <line class="thin" x1="992" y1="682" x2="1480" y2="682"/>
+  <line class="thin" x1="992" y1="642" x2="1480" y2="642"/>
+  <line class="thin" x1="992" y1="602" x2="1480" y2="602"/>
+  <rect class="soft" x="1196" y="574" width="270" height="92" rx="14"/>
+  <text class="txt-small" x="1214" y="598">Mini host pressure sparkline</text>
+  <path class="line" d="M1216 646 C1264 620, 1300 618, 1342 628 S1408 642, 1450 610"/>
+
+  <rect class="panel" x="416" y="742" width="352" height="124" rx="18"/>
+  <text class="txt-h2" x="440" y="770">Source-Backed Checks</text>
+  <rect class="mid" x="440" y="790" width="300" height="14" rx="7"/>
+  <rect class="mid" x="440" y="816" width="286" height="14" rx="7"/>
+  <rect class="mid" x="440" y="842" width="270" height="14" rx="7"/>
+
+  <rect class="panel" x="790" y="742" width="352" height="124" rx="18"/>
+  <text class="txt-h2" x="814" y="770">ATM Fleet Snapshot</text>
+  <rect class="mid" x="814" y="792" width="300" height="16" rx="8"/>
+  <rect class="mid" x="814" y="818" width="300" height="16" rx="8"/>
+  <rect class="mid" x="814" y="844" width="300" height="16" rx="8"/>
+
+  <rect class="panel" x="1164" y="742" width="348" height="124" rx="18"/>
+  <text class="txt-h2" x="1188" y="770">Incidents and Recommendations</text>
+  <rect class="mid" x="1188" y="792" width="296" height="16" rx="8"/>
+  <rect class="mid" x="1188" y="818" width="280" height="16" rx="8"/>
+  <rect class="mid" x="1188" y="844" width="252" height="16" rx="8"/>
+
+  <path class="thin" d="M416 900 H1512"/>
+  <text class="txt-small" x="420" y="930">This wireframe represents the report view of the main dashboard screen.</text>
+  <text class="txt-small" x="420" y="950">Related product screens in the implemented app: ATM Detail, ATM List, Alerts, Action Center, Data Flow, and Settings.</text>
+
+  <rect class="soft" x="1238" y="880" width="274" height="52" rx="12"/>
+  <text class="txt-small" x="1254" y="903">Suggested caption:</text>
+  <text class="txt-small" x="1254" y="923">Figure X. Early wireframe of the ATM operations dashboard.</text>
+</svg>
