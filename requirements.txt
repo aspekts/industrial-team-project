@@ -9,6 +9,7 @@ scikit-learn>=1.4       # Isolation Forest
 plotly>=5.20
 dash>=2.16              # Dashboard framework
 flask>=3.0              # Lightweight backend for serving the dashboard
+flasgger>=0.9.7.1       # Swagger UI and OpenAPI generation for Flask
 
 # --- Testing ---
 pytest>=8.1

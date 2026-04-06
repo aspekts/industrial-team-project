@@ -1,230 +1,284 @@
-# NCR Atleos — Log Aggregation, Analysis & Diagnostics Platform
+# NCR Atleos Log Aggregation, Analysis and Diagnostics Platform
 
-> University of Dundee · Industrial Team Project · 2026
+University of Dundee Industrial Team Project, 2026.
 
-A prototype observability platform that ingests logs from multiple ATM and banking infrastructure sources, detects anomalies, and surfaces intelligent diagnostic recommendations.
+This repository contains a prototype observability platform for ATM operations. It ingests synthetic logs from multiple banking and infrastructure sources, validates and cleans them into SQLite, detects known anomaly patterns, scores unusual behaviour with Isolation Forest, correlates related detections into incidents, and presents the results in a role-based dashboard backed by a documented Flask API.
 
----
+## What The Repo Covers
 
-## Team
+- Synthetic data generation for seven source systems
+- Parser and ingestion flow from source files into raw text exports
+- Data cleaning and schema-based loading into SQLite
+- Rules-based anomaly detection for A1-A7 patterns
+- ML-based anomaly scoring for selected metric sources
+- Cross-source incident correlation
+- Recommendation generation and feedback capture
+- Role-based dashboard with auth, action logging, and live simulation controls
+- Swagger-powered API documentation for the Flask backend
+- Tests covering parsers, cleaning, analysis, ML, and dashboard endpoints
 
-| Name | Role |
-|---|---|
-| Marcus | Lead · Synthetic data generation · ML model · Recommendation engine |
-| Max | Log parsers (all 7 sources) |
-| Emily | Data filtering |
-| Olga | Data cleaning pipeline |
-| Callum | Anomaly detection rules · Cross-source correlation |
-| Sophina | Dashboard & visualisation |
+## End-To-End Flow
 
----
+```text
+Synthetic source files
+  -> src/parsers/ingest.py
+  -> data/raw/*.txt
+  -> src/cleaning/data_cleaning.py
+  -> data/clean/atm_logs.db
+  -> src/analysis/detect.py
+  -> analysis_detections
+  -> src/ml/scorer.py
+  -> ml_anomaly_scores
+  -> src/analysis/correlate.py
+  -> incidents
+  -> src/dashboard/server.py
+  -> HTML dashboard + REST API + Swagger docs
+```
+
+The main application entrypoint is `main.py`. It starts the Flask dashboard and runs the ingestion, cleaning, detection, scoring, and correlation pipeline.
+
+## Repository Overview
+
+### Main entrypoints
+
+- `main.py`: starts the dashboard server and runs the pipeline
+- `src/dashboard/server.py`: Flask application, HTML views, API endpoints, Swagger docs
+- `src/synthetic/live_agent.py`: background synthetic event generator for near-real-time demo updates
+
+### Source modules
+
+- `src/parsers/`: converts synthetic source files into raw tabular exports
+- `src/cleaning/`: validates, normalises, and loads data into SQLite
+- `src/analysis/`: static anomaly detection, taxonomy, correlation, recommendations
+- `src/ml/`: feature extraction, Isolation Forest model, anomaly scoring
+- `src/dashboard/`: backend routes, auth, templates, and frontend assets
+- `src/synthetic/`: synthetic data generation and live injection logic
+
+### Supporting directories
+
+- `data/synthetic/`: committed synthetic source data used for demo and testing
+- `data/raw/`: parser output generated locally
+- `data/clean/`: cleaned SQLite databases and related outputs
+- `docs/`: schema documentation and architecture decisions
+- `tests/`: automated test suite mirroring the main project areas
 
 ## Data Sources
 
-| # | Source | Format |
-|---|---|---|
-| 1 | ATM Application Log | JSON |
-| 2 | ATM Hardware Sensor Log | JSON |
-| 3 | Terminal Handler Application Log | JSON |
-| 4 | Kafka ATM Metrics Stream | JSON |
-| 5 | Prometheus Metrics | CSV |
-| 6 | Windows OS Metrics Log | CSV |
-| 7 | GCP Cloud Metrics | CSV |
+The platform currently models seven synthetic data sources:
 
-All data used in this project is **synthetic** — no real NCR Atleos production data is included in this repository.
+| Source | Table | Format | Purpose |
+|---|---|---|---|
+| ATM Application Log | `ATMA` | JSON | ATM client activity, errors, request lifecycle |
+| ATM Hardware Sensor Log | `ATMH` | JSON | Hardware status, sensor warnings, cash cassette state |
+| Terminal Handler App Log | `TERM` | JSON | Service-side request handling and runtime failures |
+| Kafka ATM Metrics Stream | `KAFK` | JSON | Transaction throughput, success rates, and failures |
+| Prometheus Metrics | `PROM` | CSV | JVM and service metrics |
+| Windows OS Metrics | `WINOS` | CSV | ATM host CPU, memory, disk, and network telemetry |
+| GCP Cloud Metrics | `GCP` | CSV | Infrastructure and container-level cloud metrics |
 
----
+The shared schema reference lives in `docs/schema.md`.
 
-## Anomaly Types
+## Anomaly Coverage
+
+The rules-based analysis layer currently models these anomaly types:
 
 | ID | Name | Primary Sources |
 |---|---|---|
-| A1 | Network timeout cascade | ATM App, Kafka, Terminal Handler |
-| A2 | Cash cassette low → empty → OOS | ATM Hardware, Kafka |
-| A3 | JVM memory leak | Prometheus, GCP |
-| A4 | Container restart loop | GCP, Terminal Handler |
-| A5 | High response time + success rate drop | Kafka, ATM App |
-| A6 | OS memory pressure → app timeout | Windows OS, ATM App |
-| A7 | Out-of-order / malformed Kafka event | Kafka |
+| A1 | Network timeout cascade | ATMA, KAFK, TERM |
+| A2 | Cash cassette depletion | ATMH, KAFK |
+| A3 | JVM memory leak -> OOM | PROM, GCP, TERM |
+| A4 | Container restart loop | GCP, TERM |
+| A5 | Performance degradation | KAFK, ATMA |
+| A6 | OS memory pressure | WINOS, ATMA |
+| A7 | Out-of-order or malformed Kafka event | KAFK |
 
----
+Static taxonomy data is managed through `src/analysis/taxonomy.py`.
 
-## Project Structure
+## Dashboard Capabilities
 
-```
-.
-├── data/
-│   ├── synthetic/      # Generated log samples (committed for dev/test use)
-│   ├── raw/            # Parser output — gitignored, generated locally
-│   └── cleaned/        # Cleaned pipeline output — gitignored, generated locally
-├── src/
-│   ├── parsers/        # Max — log ingestion & parsing for all 7 sources
-│   ├── cleaning/       # Emily & Olga — normalisation, deduplication, null handling
-│   ├── analysis/       # Callum — anomaly detection rules (A1-A7) & correlation engine
-│   ├── ml/             # Marcus — Isolation Forest model & recommendation engine
-│   └── dashboard/      # Sophina — visualisation & UI
-├── tests/              # Mirrors src/ structure
-├── docs/               # Schema spec, architecture diagrams, ADRs
-│   ├── schema.md           — Source table schemas and field definitions
-│   └── intake_method.md    — ADR: realtime log intake approach (issue #28)
-├── notebooks/          # Exploratory / prototyping notebooks (not production code)
-└── .github/workflows/  # CI — lint + test on every push / PR
-```
+The dashboard is served by Flask and supports three user roles:
 
----
+- `admin`: platform-wide readiness, governance, and source coverage
+- `manager`: operational queue, issue review, and action follow-up
+- `ops`: ATM-level incidents, technical evidence, and live operational monitoring
 
-## Getting Started
+Key dashboard features:
+
+- session-based signup and login
+- role-specific dashboard routing
+- health and system status endpoints
+- ATM list, alerts, incidents, trends, taxonomy, ML summary, and recommendations
+- feedback capture for recommendation quality
+- action logging for manager and ops workflows
+- live agent start, stop, status, and anomaly injection controls
+
+## API Documentation
+
+Swagger UI is integrated into the Flask app.
+
+- Swagger UI: `/api/docs/`
+- OpenAPI JSON: `/api/openapi.json`
+
+Once the app is running locally, open:
+
+- `http://127.0.0.1:5000/api/docs/`
+
+The docs are generated from route docstrings in `src/dashboard/server.py`.
+
+## Live Agent
+
+The live agent provides a near-real-time demo mode for the dashboard.
+
+- it runs as a background thread
+- it writes directly into the cleaned SQLite tables
+- it re-runs detection and correlation after each tick
+- it can inject selected anomaly types for demo scenarios
+
+Supported injection types currently include `A1`, `A2`, `A4`, `A5`, `A6`, and `A7`.
+
+The design decision and trade-offs are documented in `docs/intake_method.md`.
+
+## Recommendation Engine
+
+`src/analysis/recommendations.py` provides a rule-driven recommendation layer that:
+
+- maps anomaly types to remediation guidance
+- ranks recommendations with a confidence score
+- stores user feedback in SQLite
+- adjusts recommendation confidence using recorded likes and dislikes
+
+## Machine Learning Layer
+
+`src/ml/scorer.py` orchestrates feature extraction and Isolation Forest scoring for:
+
+- `KAFK`
+- `WINOS`
+- `GCP`
+- `PROM`
+
+The ML layer stores results in `ml_anomaly_scores` and can register dynamic taxonomy entries for detected anomaly clusters.
+
+## Setup
 
 ### Prerequisites
 
 - Python 3.11+
-- `pip` or a virtual environment manager (e.g. `uv`, `venv`)
+- a local virtual environment
 
-### Setup
+### Recommended local setup
 
 ```bash
-git clone https://github.com/aspekts/industrial-team-project.git
-cd industrial-team-project
-
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-
-pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt
 ```
 
-### Running pipeline
+This repository already expects a project-local virtual environment at `.venv`.
+
+## Running The Project
+
+### Start the full application
 
 ```bash
-python main.py
+.venv/bin/python main.py
 ```
 
-### Running tests
+By default the app starts on `http://0.0.0.0:5000` using values from `config.ini`.
+
+### Important runtime paths
+
+- raw parser output: `data/raw`
+- cleaned database: `data/clean/atm_logs.db`
+- auth database: `data/clean/auth.db`
+- cleaning error output: `data/clean/broken_logs.json`
+
+### Configuration
+
+`config.ini` currently defines:
+
+```ini
+[NETWORK]
+port=5000
+host=0.0.0.0
+
+[PATHS]
+raw_data_dir=data/raw
+cleaned_db_path=data/clean/atm_logs.db
+error_path=data/clean
+```
+
+### Alternative dashboard-only startup
 
 ```bash
-pytest
+.venv/bin/python src/dashboard/server.py
 ```
 
-### Linting
+This starts the Flask app directly, without the full pipeline orchestration performed by `main.py`.
+
+## Development Commands
+
+### Install dependencies
 
 ```bash
-ruff check .
+.venv/bin/pip install -r requirements.txt
 ```
 
----
+### Run tests
 
-## Architecture decisions
+```bash
+.venv/bin/pytest
+```
 
-| ADR | Description |
+### Run linting
+
+```bash
+.venv/bin/ruff check .
+```
+
+### Open the API docs after startup
+
+```text
+http://127.0.0.1:5000/api/docs/
+```
+
+## Test Coverage Areas
+
+The current test suite includes coverage for:
+
+- parser ingestion in `tests/parsers/`
+- cleaning and filtering in `tests/cleaning/`
+- taxonomy and incident correlation in `tests/analysis/`
+- Isolation Forest scoring in `tests/ml/`
+- dashboard action and documentation endpoints in `tests/dashboard/`
+- scaffold checks in `tests/test_scaffold.py`
+
+## Deployment Notes
+
+The repository includes a `railway.toml` deployment config.
+
+- start command: `python main.py`
+- health check path: `/health`
+
+## Architecture References
+
+- `docs/schema.md`: shared schema and anomaly signature reference
+- `docs/intake_method.md`: ADR for the real-time ingestion approach
+
+## Team Ownership
+
+| Name | Area |
 |---|---|
-| [Realtime log intake method](docs/intake_method.md) | Direct DB micro-batch approach — live agent writes to SQLite; dashboard polls every 5 s |
-
----
-
-## Sprint Plan
-
-| Sprint | Days | Goal | Milestone |
-|---|---|---|---|
-| Sprint 1 — Foundation | 1–7 | Schema, synthetic data, parsers, cleaning pipeline, static wireframes | Mar 22 |
-| Sprint 2 — Core Features | 8–16 | Anomaly detection, ML model, correlation engine, working dashboard | Mar 31 |
-| Sprint 3 — Polish & Stretch | 17–21 | Recommendation engine, feedback loop, stretch goals, final docs | Apr 5 |
-
----
-
-## ATM Operations Dashboard
-Overview
-
-This project is an operations dashboard designed to monitor ATM systems across multiple data sources, including application logs, hardware sensors, streaming metrics, and infrastructure telemetry.
-
-The dashboard is built to support different user personas (e.g. Admin, ATM Manager, Operations) and provides a structured view of system activity, errors, and operational status.
-
-Features
-Role-based access (Admin, Manager, Ops)
-Persona-specific dashboards
-Flask backend serving dashboard and API endpoints
-Integration-ready for live data from SQLite (atm_logs.db)
-Health and system status endpoints
-Clean, structured UI for operational monitoring
-Project Structure
-src/
-  dashboard/
-    server.py        # Flask backend
-    index.html       # Dashboard UI
-    styles.css       # Styling
-    app.js           # Frontend logic
-
-data/
-  clean/
-    atm_logs.db      # Cleaned database (if available)
-Running the Application
-1. Start the Flask server
-python src/dashboard/server.py
-2. Open in browser
-http://127.0.0.1:5000
-
-This will take you to the login page.
-
-Authentication Flow
-Users can sign up and choose a role:
-Admin
-ATM Manager
-Operations
-Users can then sign in using their credentials
-After login, users are redirected to their role-specific dashboard
-Sessions are managed using Flask
-Logout clears the session and returns to the login page
-API Endpoints
-Health Check
-/health
-
-Returns system status and database availability.
-
-API Status
-/api/status
-
-Returns:
-
-whether the database is present
-available tables (if database exists)
-Data Integration
-
-The dashboard is designed to integrate with a cleaned SQLite database:
-
-data/clean/atm_logs.db
-
-If the database is not present:
-
-the system will still run
-endpoints will safely return empty/unavailable states
-User Personas
-Admin
-Full system overview
-Cross-source visibility
-High-level monitoring
-ATM Manager
-Local ATM status
-Immediate operational issues
-Action-focused information
-Operations (Ops)
-Infrastructure health
-Error spikes and system failures
-Telemetry and backend monitoring
-Notes
-The authentication system is implemented using Flask sessions
-Passwords are securely stored using hashing
-
----
+| Marcus | Lead, synthetic data generation, ML model, recommendation engine |
+| Max | Log parsers and ingestion for all seven sources |
+| Emily | Data filtering |
+| Olga | Data cleaning pipeline |
+| Callum | Rules-based anomaly detection and cross-source correlation |
+| Sophina | Dashboard and visualisation |
 
 ## Contributing
 
-1. Branch off `main` using the naming convention `<initials>/<issue-number>-<short-description>`
-   (e.g. `mc/4-synthetic-data`).
-2. Open a PR referencing the issue number.
-3. At least one teammate must review before merging.
-4. CI (lint + tests) must pass.
+1. Branch from `main` using `<initials>/<issue-number>-<short-description>`.
+2. Open a pull request linked to the relevant issue.
+3. Get at least one teammate review before merging.
+4. Ensure linting and tests pass.
 
-> **Schema freeze:** The shared data schema (`docs/schema.md`) is frozen after Day 4 and may only
-> be changed via PR with consensus from all affected owners.
-
-
-The system is designed to be lightweight and extendable
-Some features may depend on data availability from the pipeline
+Schema changes are controlled through `docs/schema.md` and should only be updated through reviewed pull requests with agreement from affected owners.

@@ -6,6 +6,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from flasgger import Swagger
 from flask import (
     Flask,
     jsonify,
@@ -79,7 +80,22 @@ def render_dashboard_view(role: str):
 _live_agent = None  # module-level singleton; started/stopped via API
 
 
+def _build_swagger_template() -> dict:
+    return {
+        "swagger": "2.0",
+        "info": {
+            "title": "ATM Monitoring Dashboard API",
+            "description": "API documentation for the ATM monitoring dashboard and operational data endpoints.",
+            "version": "1.0.0",
+        },
+        "basePath": "/",
+        "schemes": ["http", "https"],
+    }
+
+
 def create_app(db_path: Path | None = None) -> Flask:
+    """Create and configure the Flask dashboard application."""
+
     app = Flask(
         __name__,
         static_folder=str(DASHBOARD_DIR),
@@ -89,14 +105,69 @@ def create_app(db_path: Path | None = None) -> Flask:
     app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
     app.config["DB_PATH"] = str(db_path or DEFAULT_DB_PATH)
     app.config["AUTH_DB_PATH"] = str(DEFAULT_AUTH_DB_PATH)
+
+    Swagger(
+        app,
+        config={
+            "headers": [],
+            "specs": [
+                {
+                    "endpoint": "openapi",
+                    "route": "/api/openapi.json",
+                    "rule_filter": lambda rule: True,
+                    "model_filter": lambda tag: True,
+                }
+            ],
+            "static_url_path": "/flasgger_static",
+            "swagger_ui": True,
+            "specs_route": "/api/docs/",
+        },
+        template=_build_swagger_template(),
+    )
+
     ensure_auth_db(Path(app.config["AUTH_DB_PATH"]))
 
     @app.get("/")
     def index():
+        """Redirect the root URL to the login page.
+        ---
+        tags:
+          - Auth
+        summary: Redirect to login
+        responses:
+          302:
+            description: Redirects the client to the login view.
+        """
+
         return redirect(url_for("login"))
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
+        """Render the login page and authenticate submitted credentials.
+        ---
+        tags:
+          - Auth
+        summary: Log in a user
+        consumes:
+          - application/x-www-form-urlencoded
+        parameters:
+          - in: formData
+            name: username
+            type: string
+            required: false
+            description: Username to authenticate.
+          - in: formData
+            name: password
+            type: string
+            required: false
+            description: Password for the supplied username.
+        responses:
+          200:
+            description: Login page rendered, optionally with a validation error.
+          302:
+            description: Successful authentication redirects to the role dashboard.
+        """
+
         error = None
         selected_username = ""
 
@@ -125,6 +196,45 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.route("/signup", methods=["GET", "POST"])
     def signup():
+        """Render the signup page and create a user account.
+        ---
+        tags:
+          - Auth
+        summary: Register a new user
+        consumes:
+          - application/x-www-form-urlencoded
+        parameters:
+          - in: formData
+            name: username
+            type: string
+            required: false
+            description: New username.
+          - in: formData
+            name: password
+            type: string
+            required: false
+            description: New account password.
+          - in: formData
+            name: confirm_password
+            type: string
+            required: false
+            description: Confirmation of the password value.
+          - in: formData
+            name: role
+            type: string
+            required: false
+            enum:
+              - admin
+              - manager
+              - ops
+            description: Role to assign to the new account.
+        responses:
+          200:
+            description: Signup page rendered, optionally with a validation error.
+          302:
+            description: Successful signup redirects to the login page.
+        """
+
         error = None
         selected_username = ""
         selected_role = ""
@@ -164,6 +274,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.post("/logout")
     def logout():
+        """Clear the current session and return the user to login.
+        ---
+        tags:
+          - Auth
+        summary: Log out the current user
+        responses:
+          302:
+            description: Session cleared and client redirected to login.
+        """
+
         session.clear()
         return redirect(url_for("login"))
 
@@ -177,18 +297,64 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/dashboard/admin")
     def admin_dashboard():
+        """Render the admin dashboard view.
+        ---
+        tags:
+          - Dashboard
+        summary: Open the admin dashboard
+        responses:
+          200:
+            description: Admin dashboard HTML view.
+          302:
+            description: Redirected to login or the user's allowed dashboard.
+        """
+
         return serve_dashboard_for_role("admin")
 
     @app.get("/dashboard/manager")
     def manager_dashboard():
+        """Render the manager dashboard view.
+        ---
+        tags:
+          - Dashboard
+        summary: Open the manager dashboard
+        responses:
+          200:
+            description: Manager dashboard HTML view.
+          302:
+            description: Redirected to login or the user's allowed dashboard.
+        """
+
         return serve_dashboard_for_role("manager")
 
     @app.get("/dashboard/ops")
     def ops_dashboard():
+        """Render the operations dashboard view.
+        ---
+        tags:
+          - Dashboard
+        summary: Open the ops dashboard
+        responses:
+          200:
+            description: Operations dashboard HTML view.
+          302:
+            description: Redirected to login or the user's allowed dashboard.
+        """
+
         return serve_dashboard_for_role("ops")
 
     @app.get("/health")
     def health():
+        """Return high-level application and database health details.
+        ---
+        tags:
+          - Health
+        summary: Check application health
+        responses:
+          200:
+            description: Health information for the dashboard and backing databases.
+        """
+
         db_file = Path(app.config["DB_PATH"])
         auth_db_file = Path(app.config["AUTH_DB_PATH"])
         return jsonify(
@@ -204,6 +370,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/status")
     def api_status():
+        """Return database availability and discovered table names.
+        ---
+        tags:
+          - System
+        summary: Get API status
+        responses:
+          200:
+            description: Current database presence, paths, role, and table metadata.
+        """
+
         db_file = Path(app.config["DB_PATH"])
         auth_db_file = Path(app.config["AUTH_DB_PATH"])
         response = {
@@ -307,6 +483,25 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/summary")
     def api_summary():
+        """Return top-level dashboard summary metrics.
+        ---
+        tags:
+          - Metrics
+        summary: Get summary metrics
+        parameters:
+          - in: query
+            name: date
+            type: string
+            format: date
+            required: false
+            description: Optional filter in YYYY-MM-DD format.
+        responses:
+          200:
+            description: Summary metric payload for the selected date window.
+          400:
+            description: Invalid date format supplied.
+        """
+
         filter_date = _get_filter_date()
         if request.args.get("date") and not filter_date:
             return _invalid_date_response()
@@ -419,6 +614,25 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/scale")
     def api_scale():
+        """Return platform scale metrics such as sources, ATMs, and time window.
+        ---
+        tags:
+          - Metrics
+        summary: Get scale metrics
+        parameters:
+          - in: query
+            name: date
+            type: string
+            format: date
+            required: false
+            description: Optional filter in YYYY-MM-DD format.
+        responses:
+          200:
+            description: Scale statistics for the current dataset.
+          400:
+            description: Invalid date format supplied.
+        """
+
         filter_date = _get_filter_date()
         if request.args.get("date") and not filter_date:
             return _invalid_date_response()
@@ -489,6 +703,25 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/source-snapshot")
     def api_source_snapshot():
+        """Return source-by-source data availability and record counts.
+        ---
+        tags:
+          - Sources
+        summary: Get source snapshot
+        parameters:
+          - in: query
+            name: date
+            type: string
+            format: date
+            required: false
+            description: Optional filter in YYYY-MM-DD format.
+        responses:
+          200:
+            description: Source availability and record count summary.
+          400:
+            description: Invalid date format supplied.
+        """
+
         filter_date = _get_filter_date()
         if request.args.get("date") and not filter_date:
             return _invalid_date_response()
@@ -527,6 +760,25 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/atm-list")
     def api_atm_list():
+        """Return the ATM fleet list with status and issue summary.
+        ---
+        tags:
+          - ATM
+        summary: List monitored ATMs
+        parameters:
+          - in: query
+            name: date
+            type: string
+            format: date
+            required: false
+            description: Optional filter in YYYY-MM-DD format.
+        responses:
+          200:
+            description: ATM inventory and highest-priority issue state.
+          400:
+            description: Invalid date format supplied.
+        """
+
         filter_date = _get_filter_date()
         if request.args.get("date") and not filter_date:
             return _invalid_date_response()
@@ -618,6 +870,25 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/alerts")
     def api_alerts():
+        """Return grouped critical and warning anomaly detections.
+        ---
+        tags:
+          - Alerts
+        summary: Get alert groups
+        parameters:
+          - in: query
+            name: date
+            type: string
+            format: date
+            required: false
+            description: Optional filter in YYYY-MM-DD format.
+        responses:
+          200:
+            description: Critical and warning detection groups.
+          400:
+            description: Invalid date format supplied.
+        """
+
         filter_date = _get_filter_date()
         if request.args.get("date") and not filter_date:
             return _invalid_date_response()
@@ -689,6 +960,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/trend")
     def api_trend():
+        """Return hourly ATM activity and error trend data.
+        ---
+        tags:
+          - Metrics
+        summary: Get ATMA hourly trend
+        responses:
+          200:
+            description: Hourly total and error event counts.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "points": []})
@@ -729,6 +1010,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/source-checks")
     def api_source_checks():
+        """Return health checks derived from key source tables.
+        ---
+        tags:
+          - Sources
+        summary: Get source health checks
+        responses:
+          200:
+            description: Derived source health checks with severity labels.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "checks": []})
@@ -821,6 +1112,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/priority-summary")
     def api_priority_summary():
+        """Return the highest-priority detection summary for the dashboard banner.
+        ---
+        tags:
+          - Alerts
+        summary: Get top-priority anomaly summary
+        responses:
+          200:
+            description: Most urgent anomaly summary and follow-up messaging.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable"})
@@ -904,6 +1205,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/me")
     def api_me():
+        """Return the authenticated user's basic session identity.
+        ---
+        tags:
+          - Auth
+        summary: Get current session user
+        responses:
+          200:
+            description: Session username and role, or an unauthenticated status.
+        """
+
         username = session.get("user_name", "")
         role = session.get("role", "")
         if not username:
@@ -912,6 +1223,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/winos-trend")
     def api_winos_trend():
+        """Return hourly Windows host CPU trend data.
+        ---
+        tags:
+          - Metrics
+        summary: Get WINOS hourly trend
+        responses:
+          200:
+            description: Hourly average and peak CPU usage values.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "points": []})
@@ -955,6 +1276,22 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/atm-detail/<atm_id>")
     def api_atm_detail(atm_id):
+        """Return detailed operational context for a specific ATM.
+        ---
+        tags:
+          - ATM
+        summary: Get ATM detail
+        parameters:
+          - in: path
+            name: atm_id
+            type: string
+            required: true
+            description: ATM identifier to inspect.
+        responses:
+          200:
+            description: Detailed ATM state, detections, supporting evidence, or a not_found status payload.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable"})
@@ -1084,6 +1421,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/incidents")
     def api_incidents():
+        """Return correlated incidents assembled from detections.
+        ---
+        tags:
+          - Incidents
+        summary: List incidents
+        responses:
+          200:
+            description: Incident list with total count.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "incidents": []})
@@ -1118,6 +1465,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/ml-summary")
     def api_ml_summary():
+        """Return anomaly scoring totals and per-source ML summary data.
+        ---
+        tags:
+          - Machine Learning
+        summary: Get ML scoring summary
+        responses:
+          200:
+            description: ML scoring totals, model version, and source breakdown.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable"})
@@ -1153,6 +1510,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/taxonomy")
     def api_taxonomy():
+        """Return the stored anomaly taxonomy entries.
+        ---
+        tags:
+          - Taxonomy
+        summary: List anomaly taxonomy entries
+        responses:
+          200:
+            description: Taxonomy rows ordered by discovery method and anomaly type.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "entries": []})
@@ -1172,6 +1539,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/recommendations")
     def api_recommendations():
+        """Generate recommendations for the current detection set.
+        ---
+        tags:
+          - Recommendations
+        summary: Get recommendations
+        responses:
+          200:
+            description: Ranked recommendation list for active detections.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "recommendations": []})
@@ -1212,6 +1589,41 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.post("/api/feedback")
     def api_feedback():
+        """Record recommendation feedback for an anomaly type.
+        ---
+        tags:
+          - Recommendations
+        summary: Submit recommendation feedback
+        consumes:
+          - application/json
+        parameters:
+          - in: body
+            name: body
+            required: true
+            schema:
+              type: object
+              required:
+                - anomaly_type
+                - vote
+              properties:
+                anomaly_type:
+                  type: string
+                  description: Taxonomy or anomaly type receiving feedback.
+                atm_id:
+                  type: string
+                  description: Optional ATM identifier tied to the feedback.
+                vote:
+                  type: string
+                  description: Feedback direction, as accepted by the recommendation engine.
+        responses:
+          200:
+            description: Feedback recorded and confidence recalculated.
+          400:
+            description: Missing fields or invalid vote payload.
+          503:
+            description: Application database is unavailable.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable"}), 503
@@ -1246,6 +1658,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/feedback-history")
     def api_feedback_history():
+        """Return recent recommendation feedback and aggregate statistics.
+        ---
+        tags:
+          - Recommendations
+        summary: Get feedback history
+        responses:
+          200:
+            description: Recent recommendation feedback entries and aggregate stats.
+        """
+
         db_file = _db()
         if not db_file.exists():
             return jsonify({"status": "unavailable", "history": [], "stats": []})
@@ -1269,6 +1691,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/actions")
     def api_actions():
+        """Return the most recent recorded dashboard actions.
+        ---
+        tags:
+          - Actions
+        summary: List recorded actions
+        responses:
+          200:
+            description: Recent action log entries.
+        """
+
         with _connect() as conn:
             _ensure_action_log_table(conn)
             conn.row_factory = sqlite3.Row
@@ -1285,6 +1717,41 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.post("/api/actions")
     def api_record_action():
+        """Persist an operator or manager action for audit history.
+        ---
+        tags:
+          - Actions
+        summary: Record an action
+        consumes:
+          - application/json
+        parameters:
+          - in: body
+            name: body
+            required: true
+            schema:
+              type: object
+              required:
+                - action_label
+              properties:
+                anomaly_type:
+                  type: string
+                anomaly_name:
+                  type: string
+                atm_id:
+                  type: string
+                action_label:
+                  type: string
+                notes:
+                  type: string
+        responses:
+          200:
+            description: Action recorded successfully.
+          400:
+            description: Missing required action_label field.
+          403:
+            description: Current session role is not allowed to record actions.
+        """
+
         user_role = session.get("role", "")
         if user_role not in {"manager", "ops"}:
             return jsonify({"status": "error", "reason": "forbidden"}), 403
@@ -1341,6 +1808,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.get("/api/live-agent/status")
     def api_live_agent_status():
+        """Return the current synthetic live-agent runtime state.
+        ---
+        tags:
+          - Live Agent
+        summary: Get live-agent status
+        responses:
+          200:
+            description: Runtime state and recent activity for the live agent.
+        """
+
         global _live_agent
         if _live_agent is None:
             return jsonify(
@@ -1357,6 +1834,28 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.post("/api/live-agent/start")
     def api_live_agent_start():
+        """Start the synthetic live agent if it is not already running.
+        ---
+        tags:
+          - Live Agent
+        summary: Start live agent
+        consumes:
+          - application/json
+        parameters:
+          - in: body
+            name: body
+            required: false
+            schema:
+              type: object
+              properties:
+                interval:
+                  type: integer
+                  description: Event generation interval in seconds.
+        responses:
+          200:
+            description: Live-agent startup result and current runtime state.
+        """
+
         global _live_agent
         data = request.get_json(silent=True) or {}
         interval = int(data.get("interval", 10))
@@ -1384,6 +1883,16 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.post("/api/live-agent/stop")
     def api_live_agent_stop():
+        """Stop the synthetic live agent.
+        ---
+        tags:
+          - Live Agent
+        summary: Stop live agent
+        responses:
+          200:
+            description: Live-agent stop result and current runtime state.
+        """
+
         global _live_agent
         if _live_agent is None:
             return jsonify({"status": "ok", "running": False})
@@ -1392,6 +1901,32 @@ def create_app(db_path: Path | None = None) -> Flask:
 
     @app.post("/api/live-agent/inject")
     def api_live_agent_inject():
+        """Inject a specific anomaly type into the running live agent.
+        ---
+        tags:
+          - Live Agent
+        summary: Inject live-agent anomaly
+        consumes:
+          - application/json
+        parameters:
+          - in: body
+            name: body
+            required: true
+            schema:
+              type: object
+              required:
+                - anomaly_type
+              properties:
+                anomaly_type:
+                  type: string
+                  description: Supported anomaly identifier to inject.
+        responses:
+          200:
+            description: Anomaly injected successfully.
+          400:
+            description: Agent is not running or anomaly type is unsupported.
+        """
+
         global _live_agent
         data = request.get_json(silent=True) or {}
         anomaly_type = data.get("anomaly_type", "").upper()
